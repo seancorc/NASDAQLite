@@ -1,11 +1,19 @@
 open OrderBook
 
+module type MatchingEngine = sig 
+  type t
+  val matchorder: t -> order -> order list * t
+end
 
-type t = OrderBook.t
+module MakeMatchingEngine = functor (OBook : OrderBook) -> struct
 
-let matchorder obook order =
-  let complement_type = if order.order_type = Buy then Sell else Buy in 
-  let complement_order = {asset=order.asset;price=order.price;order_type=complement_type} in
-  if OrderBook.mem (complement_order) then [order; complement_order] * (OrderBook.remove obook)
-  else (OrderBook.insert order)
+  module OBook = OBook
 
+  type t = OBook.t
+
+  let matchorder obook order =
+    let complement_type = if order.order_type = Buy then Sell else Buy in 
+    let complement_order = {asset=order.asset;price=order.price;order_type=complement_type} in
+    if Obook.mem (complement_order) then [order; complement_order], (OBook.remove obook)
+    else [], (Obook.insert order)
+end
