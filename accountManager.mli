@@ -1,5 +1,8 @@
 open Account
 
+exception InvalidUsername of string
+exception InvalidPassword
+
 module type AccountManager = sig 
   type t
   val create : unit -> t

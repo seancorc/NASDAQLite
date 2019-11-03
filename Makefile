@@ -20,9 +20,6 @@ check:
 
 bisect: clean test
 	bisect-ppx-report -I _build -html report bisect0001.out
-
-zip: bisect
-	zip search_src.zip *.ml* _tags Makefile report/*
 	
 docs: docs-public docs-private
 	
@@ -40,4 +37,4 @@ docs-private: build
 # TODO update clean
 clean:
 	ocamlbuild -clean
-	rm -rf doc.public doc.private report search_src.zip bisect*.out
+	rm -rf doc.public doc.private report bisect*.out
