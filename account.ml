@@ -8,14 +8,13 @@ module type Account = sig
   val format : Format.formatter -> t -> unit
 end
 
-
+module StringHash = struct
+  type t = string
+  let equal i j = i = j
+  let hash i = Hashtbl.hash i
+end
 
 module Account : Account = struct 
-  module StringHash = struct
-    type t = string
-    let equal i j = i = j
-    let hash i = Hashtbl.hash i
-  end
 
   module D = Hashtbl.Make(StringHash)
   type t = {

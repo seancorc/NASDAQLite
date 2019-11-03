@@ -14,19 +14,9 @@ module StringHash = struct
   let hash i = Hashtbl.hash i
 end
 
-module D = Hashtbl.Make(StringHash)
-
-let balances = D.create 10
-
-let _ = D.clear balances
-
-let a = D.add balances "hello" 10.0
-
-let a = balances
-
-type f = float D.t
-
 module Account : Account = struct 
+
+  module D = Hashtbl.Make(StringHash)
   type t = {
     username: string;
     balances: float D.t;

@@ -8,5 +8,7 @@ module type Account = sig
   val format : Format.formatter -> t -> unit
 end
 
+module StringHash : Hashtbl.HashedType
+
 
 module Account : Account
