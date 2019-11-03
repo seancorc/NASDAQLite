@@ -1,8 +1,10 @@
 open OrderBook
 
+
 module type MatchingEngine = sig 
+  module OBook : OrderBook
   type t
-  val matchorder: t -> order -> order list * t
+  val matchorder: t -> order -> transaction list * t
 end
 
 module MakeMatchingEngine = functor (OBook : OrderBook) -> struct

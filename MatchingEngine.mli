@@ -1,6 +1,8 @@
 open OrderBook
 
 
+type transaction = order * order 
+
 module type MatchingEngine = sig 
 
   (** OBook is a module representing the orderbook the matching engine 
@@ -14,7 +16,7 @@ module type MatchingEngine = sig
       the list of orders that were successfully matched and 
       the second element representing the resultant orderbook after those 
       orders have been matched. *)
-  val matchorder: t -> order -> order list * t
+  val matchorder: t -> order -> transaction list * t
 
 end
 
