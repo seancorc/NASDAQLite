@@ -19,11 +19,14 @@ module D = Hashtbl.Make(StringHash)
 exception InvalidUsername of string
 exception InvalidPassword
 
-let hash_pw p = p
+
+let hash_pw p = Bcrypt.hash p
+
+let verify_pw pw hash = Bcrypt.verify pw hash
 
 
 module AccountManager : AccountManager = struct 
-  type t = (Account.t * string) D.t
+  type t = (Account.t * Bcrypt.hash) D.t
   let create () = D.create 10
   let register (m: t) (username: string) (password: string) : Account.t = 
     let exists = D.mem m username in 
@@ -37,7 +40,7 @@ module AccountManager : AccountManager = struct
     match D.find_opt m username with 
     | Some (account, password_hash) ->
       begin
-        if (hash_pw password) = password_hash then account 
+        if (verify_pw password password_hash) then account 
         else raise InvalidPassword
       end
     | None -> raise (InvalidUsername "Username does not exist")
@@ -46,7 +49,7 @@ module AccountManager : AccountManager = struct
     match D.find_opt m username with 
     | Some (account, password_hash) ->
       begin
-        if (hash_pw password) = password_hash then 
+        if (verify_pw password password_hash) then 
           let _ = D.remove m username in 
           ()
         else raise InvalidPassword
