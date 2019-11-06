@@ -1,3 +1,3 @@
-<{account,accountManager}.ml>: coverage
+<{account,accountManager,matchingEngine,orderBook}.ml>: coverage
 <test.{byte,native}>: coverage
 true: package(unix), package(oUnit), package(qcheck), package(safepass)
