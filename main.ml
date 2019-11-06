@@ -116,7 +116,9 @@ let rec repl (s: State.t) : unit =
         print_endline "To place an order input: order type,ticker,amount";
         let i = (read_line ()) in 
         match String.trim i with 
-        | "logout" -> restart s
+        | "logout" -> 
+          let updated_state = State.set_user None s in 
+          updated_state
         | a -> 
           begin 
             let lst = String.split_on_char ',' a in 
