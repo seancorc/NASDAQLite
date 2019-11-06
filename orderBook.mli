@@ -44,6 +44,9 @@ module type OrderBook = sig
       [remove] returns an order book with the same orders
       as [ob]. *)
   val remove : order -> t -> t
+
+  val num_buys : t -> int 
+  val num_sells : t -> int
 end
 
 (** [OrderBook] is the implementation of the [OrderBook] signature *)

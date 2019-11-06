@@ -43,28 +43,34 @@ let parse_txns (txns: transaction list) am =
     ()
 
 let print_balances b = 
-  List.iter (fun a -> 
+  let _ = print_string "[" in 
+  let _ = List.iter (fun a -> 
       let (s, f) = a in 
       let _ = print_string s in 
       let _ = print_string ":" in 
       let _ = print_float f in 
-      print_newline ()) b
+      print_newline ()) b in 
+  let _ = print_string "]" in 
+  ()
 
 let rec parse_order (s : State.t) = function 
   | ["Buy"; t; a] -> 
     let order = {asset = t; price = (float_of_string a); order_type = Buy; 
                  username = Account.username (non_option_user s)} in 
     let (txs, ob) = MatchingEngine.matchorder (State.get_book s) order in 
+    let s = State.set_book ob s in 
     parse_txns txs (State.get_manager s)
   | ["Sell"; t; a] -> 
     let order = {asset = t; price = (float_of_string a); order_type = Sell; 
                  username = Account.username (non_option_user s)} in 
     let (txs, ob) = MatchingEngine.matchorder (State.get_book s) order in 
+    let s = State.set_book ob s in 
     parse_txns txs (State.get_manager s)
   | _ -> print_endline "Invalid order"; run s
 
 and run (s : State.t) : unit = 
   print_newline (); print_endline ("Account: " ^ Account.username (non_option_user s)); 
+  (* let _ = print_int (OrderBook.num_buys (State.get_book s)) in *)
   let balances = Account.balances (non_option_user s) in 
   let _ = print_balances balances in 
   print_endline "To log out of this account, type 'logout'";

@@ -17,6 +17,8 @@ module type OrderBook = sig
   val member : order -> t -> bool
   val get_complement_order : order -> t -> order option
   val remove : order -> t -> t
+  val num_buys : t -> int 
+  val num_sells : t -> int
 end
 
 module OrderBook : OrderBook = struct 
@@ -61,9 +63,11 @@ module OrderBook : OrderBook = struct
 
   let get_complement_order (o : order) ((b, s) : t) = 
     if o.order_type = Buy then
-      List.find_opt (fun o' -> o'.price = o.price) s
+      List.find_opt (fun o' -> 
+          o'.asset = o.asset && o'.price = o.price) s
     else 
-      List.find_opt (fun o' -> o'.price = o.price) b
+      List.find_opt (fun o' -> 
+          o'.asset = o.asset && o'.price = o.price) b
 
 
   let member (o : order) ((b, s) : t) = 
@@ -83,5 +87,9 @@ module OrderBook : OrderBook = struct
     match o with 
     | {asset; price; order_type = Buy; username} -> (remove_helper o b, s)
     | {asset; price; order_type = Sell; username} -> (b, remove_helper o s)
+
+  let num_buys ((b,s) : t) = List.length b 
+  let num_sells ((b,s) : t) = List.length s 
+
 end
 
