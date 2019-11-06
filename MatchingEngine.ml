@@ -12,7 +12,6 @@ module MatchingEngine = struct
   let matchorder obook order =
     match OrderBook.get_complement_order order obook with 
     | None -> 
-      let _ = print_string "none" in 
       let _ = print_int (OrderBook.num_buys (OrderBook.insert order obook)) in
       [], (OrderBook.insert order obook)
     | Some o ->

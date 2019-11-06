@@ -43,14 +43,15 @@ let parse_txns (txns: transaction list) am =
     ()
 
 let print_balances b = 
-  let _ = print_string "[" in 
+  let _ = print_string "Balances: [" in 
   let _ = List.iter (fun a -> 
       let (s, f) = a in 
       let _ = print_string s in 
       let _ = print_string ":" in 
       let _ = print_float f in 
-      print_newline ()) b in 
+      print_string "; ") b in 
   let _ = print_string "]" in 
+  let _ = print_newline () in 
   ()
 
 let rec parse_order (s : State.t) = function 
@@ -59,14 +60,18 @@ let rec parse_order (s : State.t) = function
                  username = Account.username (non_option_user s)} in 
     let (txs, ob) = MatchingEngine.matchorder (State.get_book s) order in 
     let s = State.set_book ob s in 
-    parse_txns txs (State.get_manager s)
+    let _ = parse_txns txs (State.get_manager s) in 
+    s
   | ["Sell"; t; a] -> 
     let order = {asset = t; price = (float_of_string a); order_type = Sell; 
                  username = Account.username (non_option_user s)} in 
     let (txs, ob) = MatchingEngine.matchorder (State.get_book s) order in 
     let s = State.set_book ob s in 
-    parse_txns txs (State.get_manager s)
-  | _ -> print_endline "Invalid order"; run s
+    let _ = parse_txns txs (State.get_manager s) in 
+    s
+  | _ -> 
+    let _ = print_endline "Invalid order" in 
+    s
 
 and run (s : State.t) : unit = 
   print_newline (); print_endline ("Account: " ^ Account.username (non_option_user s)); 
@@ -85,7 +90,8 @@ and run (s : State.t) : unit =
         let _ = print_endline "Invalid order" in 
         run s
       else
-        parse_order s lst; run s
+        let updated_state = parse_order s lst in 
+        run updated_state
     end
 
 
@@ -95,8 +101,7 @@ and login (s : State.t) =
   print_string "Password: ";
   let password = (read_line ()) in
   try 
-    let account = AccountManager.login (State.get_manager s) username 
-        password in 
+    let account = AccountManager.login (State.get_manager s) username password in 
     run (State.set_user (Some account) s)
   with 
   | InvalidPassword -> print_endline "Incorrect Password"; restart s
@@ -120,7 +125,7 @@ and restart (s : State.t) : unit  =
 
 and main () =
   let m = AccountManager.create () in
-  let s = State.create_state m (OrderBook.empty) in 
+  let s = State.create_state m OrderBook.empty in 
   match startup_action () with 
   | Login -> login s
   | Signup -> register s
