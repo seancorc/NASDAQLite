@@ -1,16 +1,19 @@
 (** The Order Book *)
 
-(** [order_type] is the direction of a single order. *)
+(** [order_type] is the direction of a single order: Buy or Sell. *)
 type order_type = Buy | Sell
 
-(** [order] is a single element of the order book. *)
+(** [order] is a single order element of the order book that holds the asset,
+    price, order type, and username of the order.  *)
 type order = {
   asset: string;
   price: float;
-  order_type: order_type
+  order_type: order_type;
+  username: string
 }
 
-(** An [OrderBook] is a collection of all of the orders in the market. *)
+(** [OrderBook] is the signature for the module type that will hold all of the 
+    orders in the market. *)
 module type OrderBook = sig
 
   (** [t] is the type of order books. *)
@@ -38,3 +41,6 @@ module type OrderBook = sig
       as [ob]. *)
   val remove : order -> t -> t
 end
+
+(** [OrderBook] is the implementation of the [OrderBook] signature *)
+module OrderBook : OrderBook

@@ -1,6 +1,29 @@
-open OrderBook
 
-module MyOrderBook : OrderBook = struct 
+type order_type = Buy | Sell
+
+type order = {
+  asset: string;
+  price: float;
+  order_type: order_type;
+  username: string;
+}
+
+module type OrderBook = sig
+  type t
+  val empty : t
+  val is_empty : t -> bool
+  val size : t -> int
+  val insert : order -> t -> t
+  val member : order -> t -> bool
+  val remove : order -> t -> t
+end
+
+module OrderBook : OrderBook = struct 
+  (**
+       AF: Represents OrderBook as as a tuple of two lists of type [order] 
+       elements. 
+       RI: All of the orders in first list are  buy orders and all of the orders
+       in the second list are sell orders. *)
   type t = order list * order list
 
   let empty = ([], [])
@@ -15,19 +38,19 @@ module MyOrderBook : OrderBook = struct
 
   (** [get_order_asset o] is the asset of the order [o] *)
   let get_order_asset = function
-    | {asset; price; order_type} -> asset
+    | {asset; price; order_type; username} -> asset
 
   (** [get_order_price o] is the price of the order [o] *)
   let get_order_price = function
-    | {asset; price; order_type} -> price
+    | {asset; price; order_type; username} -> price
 
   (** [get_order_direction o] is the direction of the order [o] *)
   let get_order_direction = function 
-    | {asset; price; order_type} -> order_type
+    | {asset; price; order_type; username} -> order_type
 
   let insert (o : order) ((b, s) : t) = 
     match o with 
-    | {asset; price; order_type} -> 
+    | {asset; price; order_type; username} -> 
       if order_type = Buy then (o :: b, s)
       else (b, o :: s)
 
@@ -43,19 +66,20 @@ module MyOrderBook : OrderBook = struct
 
   let member (o : order) ((b, s) : t) = 
     match o with 
-    | {asset; price; order_type = Buy} -> 
+    | {asset; price; order_type = Buy; username} -> 
       List.fold_left (fun acc elt -> if compare_orders elt o 
                        then true || acc else false || acc) false b
-    | {asset; price; order_type = Sell} ->
+    | {asset; price; order_type = Sell; username} ->
       List.fold_left (fun acc elt -> if compare_orders elt o 
                        then true || acc else false || acc) false s
 
+  (** [remove_helper o lst] removes order [o] from order list [lst]. *)
   let remove_helper (o : order) (lst : order list) = 
     List.filter (fun elt -> not (compare_orders elt o)) lst
 
   let remove (o : order) ((b, s) : t) = 
     match o with 
-    | {asset; price; order_type = Buy} -> (remove_helper o b, s)
-    | {asset; price; order_type = Sell} -> (b, remove_helper o s)
+    | {asset; price; order_type = Buy; username} -> (remove_helper o b, s)
+    | {asset; price; order_type = Sell; username} -> (b, remove_helper o s)
 end
 

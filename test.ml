@@ -58,16 +58,56 @@ module AccountTest (A: Account.Account) : Tests = struct
         assert_equal new_balance (Account.balance account ticker)
       )
   ]
+end
 
+module OrderBookTest (OB: OrderBook.OrderBook) : Tests = struct 
+  open OrderBook
+  let buy1 = {asset = "AAPL"; price = 200.; order_type = Buy; 
+              username = "Jill"}
+  let sell1 = {asset = "AAPL"; price = 205.; order_type = Sell; 
+               username = "Benny"}
+  let sell2 = {asset = "AAPL"; price = 206.; order_type = Sell; 
+               username = "James"}
+
+  let empty_book = OB.empty
+  let insert1 = OB.insert buy1 empty_book
+  let insert2 = OB.insert sell1 insert1
+  let insert3 = OB.insert sell2 insert2
+  let remove1 = OB.remove buy1 insert3
+
+  let test_is_empty name ob expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (OB.is_empty ob))
+
+  let test_size name ob expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (OB.size ob))
+
+  let test_member name o ob expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (OB.member o ob))
+
+  let tests = [
+    test_is_empty "Is empty on empty order book" empty_book true;
+    test_is_empty "Is empty on non-empty order book" insert2 false;
+    test_size "Size of empty order book" empty_book 0;
+    test_size "Size of non empty" insert3 3;
+    test_member "No members in empty" buy1 empty_book false;
+    test_member "Order is a member" sell1 insert2 true;
+    test_member "Order not a member after being removed" buy1 remove1 false;
+  ]
 end
 
 module MemAMTests = AccountManagerTest(AccountManager.AccountManager)
 
 module MemAccountTests = AccountTest(Account.Account)
 
+module MemOBTests = OrderBookTest(OrderBook.OrderBook)
+
 let tests = List.flatten [
     MemAMTests.tests;
     MemAccountTests.tests;
+    MemOBTests.tests;
   ]
 
 let suite = "Order Book Test Suite" >::: tests
