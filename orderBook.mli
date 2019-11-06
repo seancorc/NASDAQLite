@@ -35,6 +35,10 @@ module type OrderBook = sig
   (** [member o ob] is [true] iff order [o] is in [ob]. *)
   val member : order -> t -> bool
 
+  (** [get_complement_order o] is the order with all fields equal beside an
+      opposite order_type *)
+  val get_complement_order : order -> t -> order option
+
   (** [remove o ob] contains all the orders of [ob] except
       order [ob].  If [o] is not in [ob], then
       [remove] returns an order book with the same orders

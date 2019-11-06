@@ -98,16 +98,50 @@ module OrderBookTest (OB: OrderBook.OrderBook) : Tests = struct
   ]
 end
 
+module MatchingEngineTest (ME: MatchingEngine.MatchingEngine) : Tests = struct 
+  open MatchingEngine
+  open OrderBook
+  let buy1 = {asset = "AAPL"; price = 200.; order_type = Buy; 
+              username = "Jill"}
+  let sell1 = {asset = "AAPL"; price = 200.; order_type = Sell; 
+               username = "Benny"}
+  let sell2 = {asset = "AAPL"; price = 206.; order_type = Sell; 
+               username = "James"}
+
+  let empty_book = OrderBook.empty
+  let insert1 = OrderBook.insert buy1 empty_book
+  let insert2 = OrderBook.insert sell1 insert1
+  let insert3 = OrderBook.insert sell2 insert2
+
+
+  (* let printy f =
+     match (fst f) with 
+     | h :: t -> (fst h).username ^ " " ^ (snd h).username *)
+
+  let test_match_order name ob ord expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (MatchingEngine.matchorder ob ord) 
+      )
+
+  let tests = [
+    test_match_order "Buy on empty book" empty_book buy1 ([], insert1);
+    test_match_order "Transaction Made" insert1 sell1 ([sell1, buy1], empty_book)
+  ]
+end
+
 module MemAMTests = AccountManagerTest(AccountManager.AccountManager)
 
 module MemAccountTests = AccountTest(Account.Account)
 
 module MemOBTests = OrderBookTest(OrderBook.OrderBook)
 
+module MemMETests = MatchingEngineTest(MatchingEngine.MatchingEngine)
+
 let tests = List.flatten [
     MemAMTests.tests;
     MemAccountTests.tests;
     MemOBTests.tests;
+    MemMETests.tests
   ]
 
 let suite = "Order Book Test Suite" >::: tests
