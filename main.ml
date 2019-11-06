@@ -73,42 +73,24 @@ let rec parse_order (s : State.t) = function
     let _ = print_endline "Invalid order" in 
     s
 
-and run (s : State.t) : unit = 
-  print_newline (); print_endline ("Account: " ^ Account.username (non_option_user s)); 
-  (* let _ = print_int (OrderBook.num_buys (State.get_book s)) in *)
-  let balances = Account.balances (non_option_user s) in 
-  let _ = print_balances balances in 
-  print_endline "To log out of this account, type 'logout'";
-  print_endline "To place an order input: order type,ticker,amount";
-  let i = (read_line ()) in 
-  match String.trim i with 
-  | "logout" -> restart s
-  | a -> 
-    begin 
-      let lst = String.split_on_char ',' a in 
-      if List.length lst <> 3 then 
-        let _ = print_endline "Invalid order" in 
-        run s
-      else
-        let updated_state = parse_order s lst in 
-        run updated_state
-    end
-
-
-and login (s : State.t) = 
+let login (s : State.t) : State.t = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
   print_string "Password: ";
   let password = (read_line ()) in
   try 
     let account = AccountManager.login (State.get_manager s) username password in 
-    run (State.set_user (Some account) s)
+    (State.set_user (Some account) s)
   with 
-  | InvalidPassword -> print_endline "Incorrect Password"; restart s
-  | (InvalidUsername a) -> print_endline a; restart s
+  | InvalidPassword ->
+    let _ =  print_endline "Incorrect Password" in 
+    s
+  | (InvalidUsername a) -> 
+    let _ = print_endline a in 
+    s
 
 
-and register (s : State.t) = 
+let register (s : State.t) : State.t = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
   print_string "Password: ";
@@ -116,19 +98,45 @@ and register (s : State.t) =
   let new_account = AccountManager.register (State.get_manager s) username 
       password in 
   let s = State.set_user (Some new_account) s in 
-  run s
+  s
 
-and restart (s : State.t) : unit  = 
+let restart (s : State.t) : State.t  = 
   match start_loop () with 
   | Login -> login s
   | Signup -> register s
 
-and main () =
+let rec repl (s: State.t) : unit = 
+  let st = match (State.get_user s) with 
+    | None -> restart s
+    | Some user -> begin
+        print_newline (); print_endline ("Account: " ^ Account.username user); 
+        let balances = Account.balances (non_option_user s) in 
+        let _ = print_balances balances in 
+        print_endline "To log out of this account, type 'logout'";
+        print_endline "To place an order input: order type,ticker,amount";
+        let i = (read_line ()) in 
+        match String.trim i with 
+        | "logout" -> restart s
+        | a -> 
+          begin 
+            let lst = String.split_on_char ',' a in 
+            if List.length lst <> 3 then 
+              let _ = print_endline "Invalid order" in 
+              s
+            else
+              let updated_state = parse_order s lst in 
+              updated_state
+          end
+      end in 
+  repl st
+
+let main () : unit =
   let m = AccountManager.create () in
   let s = State.create_state m OrderBook.empty in 
-  match startup_action () with 
-  | Login -> login s
-  | Signup -> register s
+  let state = match startup_action () with 
+    | Login -> login s
+    | Signup -> register s in 
+  repl state
 
 
 let () = main ()
