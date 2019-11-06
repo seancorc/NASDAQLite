@@ -1,4 +1,4 @@
-MODULES=account accountManager orderBook
+MODULES=account accountManager orderBook matchingEngine
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)

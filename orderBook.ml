@@ -15,6 +15,7 @@ module type OrderBook = sig
   val size : t -> int
   val insert : order -> t -> t
   val member : order -> t -> bool
+  val get_complement_order : order -> t -> order option
   val remove : order -> t -> t
 end
 
@@ -54,28 +55,29 @@ module OrderBook : OrderBook = struct
       if order_type = Buy then (o :: b, s)
       else (b, o :: s)
 
-  (** [compare_orders o1 o2] is true iff [o1] is identical to [o2]. *)
-  let compare_orders (o1 : order) (o2 : order) = 
-    if (get_order_asset o1) = (get_order_asset o2) && 
-       (get_order_price o1) = (get_order_price o2) && 
-       (get_order_direction o1) = (get_order_direction o2) then true else false
-
   let member_helper (o : order) (lst : order list) = 
-    List.fold_left (fun acc elt -> if compare_orders elt o 
+    List.fold_left (fun acc elt -> if elt = o 
                      then true || acc else false || acc) false lst
+
+  let get_complement_order (o : order) ((b, s) : t) = 
+    if o.order_type = Buy then
+      List.find_opt (fun o' -> o'.price = o.price) s
+    else 
+      List.find_opt (fun o' -> o'.price = o.price) b
+
 
   let member (o : order) ((b, s) : t) = 
     match o with 
     | {asset; price; order_type = Buy; username} -> 
-      List.fold_left (fun acc elt -> if compare_orders elt o 
+      List.fold_left (fun acc elt -> if elt = o
                        then true || acc else false || acc) false b
     | {asset; price; order_type = Sell; username} ->
-      List.fold_left (fun acc elt -> if compare_orders elt o 
+      List.fold_left (fun acc elt -> if elt = o 
                        then true || acc else false || acc) false s
 
   (** [remove_helper o lst] removes order [o] from order list [lst]. *)
   let remove_helper (o : order) (lst : order list) = 
-    List.filter (fun elt -> not (compare_orders elt o)) lst
+    List.filter (fun elt -> not (elt = o)) lst
 
   let remove (o : order) ((b, s) : t) = 
     match o with 
