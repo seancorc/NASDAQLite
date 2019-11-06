@@ -110,7 +110,7 @@ let rec repl (s: State.t) : unit =
     | None -> restart s
     | Some user -> begin
         print_newline (); print_endline ("Account: " ^ Account.username user); 
-        let balances = Account.balances (non_option_user s) in 
+        let balances = Account.balances user in 
         let _ = print_balances balances in 
         print_endline "To log out of this account, type 'logout'";
         print_endline "To place an order input: order type,ticker,amount";
