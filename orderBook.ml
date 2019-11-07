@@ -17,8 +17,6 @@ module type OrderBook = sig
   val member : order -> t -> bool
   val get_complement_order : order -> t -> order option
   val remove : order -> t -> t
-  val num_buys : t -> int 
-  val num_sells : t -> int
 end
 
 module OrderBook : OrderBook = struct 
@@ -87,9 +85,5 @@ module OrderBook : OrderBook = struct
     match o with 
     | {asset; price; order_type = Buy; username} -> (remove_helper o b, s)
     | {asset; price; order_type = Sell; username} -> (b, remove_helper o s)
-
-  let num_buys ((b,s) : t) = List.length b 
-  let num_sells ((b,s) : t) = List.length s 
-
 end
 

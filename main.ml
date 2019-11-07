@@ -7,7 +7,7 @@ open MatchingEngine
 type action = Login | Signup 
 
 (** [start_loop] is the eithier the Login or Signup action depending on the 
-    user's input*)
+    user's input. *)
 let rec start_loop () = 
   print_endline ("Type 'login' to login or 'signup' to signup");
   match String.trim(read_line ()) with
@@ -16,17 +16,23 @@ let rec start_loop () =
   | _ -> print_endline "I couldn't understand that command, please try again."; 
     start_loop ()
 
+(** [startup_action] prints the welcome message and prompts [start_loop]. *)
 let startup_action () = 
   print_endline ("Welcome to NASDAQLite!"); 
   start_loop ()
 
+(** [non_option_user s] is the user in State [s] in non-option format.
+    Requires: The user in State [s] is not [None]. *)
 let non_option_user (s : State.t) = match State.get_user s with
   | None -> failwith "This is impossible"
   | Some u -> u
 
+(** [update_account am] updates the AccountManager [am]. *)
 let update_account am = function
   | {asset; price; order_type; username} -> ()
 
+(** [execute_order am o] executes the order [o] and updates the user's account
+    in AccountManager [am] based on the order. *)
 let execute_order am o = 
   match o with 
   | {asset; price; order_type = Buy; username} -> 
@@ -34,6 +40,8 @@ let execute_order am o =
   | {asset; price; order_type = Sell; username} -> 
     AccountManager.dec_account_balance am username asset price
 
+(** [parse_txns txns] parses the transaction list [txns] and executes each
+    order. *)
 let parse_txns (txns: transaction list) am = 
   match txns with 
   | [] -> ()
@@ -42,6 +50,7 @@ let parse_txns (txns: transaction list) am =
     let _ = execute_order am o2 in 
     ()
 
+(** [print_balances b] prints each balance in the balance list [b]. *)
 let print_balances b = 
   let _ = print_string "Balances: [" in 
   let _ = List.iter (fun a -> 
@@ -54,6 +63,8 @@ let print_balances b =
   let _ = print_newline () in 
   ()
 
+(** [parse_order s o] parses the input order [o] and updates State [s] based
+    on this input. *)
 let rec parse_order (s : State.t) = function 
   | ["Buy"; t; a] -> 
     let order = {asset = t; price = (float_of_string a); order_type = Buy; 
@@ -73,6 +84,8 @@ let rec parse_order (s : State.t) = function
     let _ = print_endline "Invalid order" in 
     s
 
+(** [login s] prompts the user to log into their account using their username
+    and password. *)
 let login (s : State.t) : State.t = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
@@ -89,7 +102,8 @@ let login (s : State.t) : State.t =
     let _ = print_endline a in 
     s
 
-
+(** [register s] prompts the user to register a newaccount with a new username
+    and password. *)
 let register (s : State.t) : State.t = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
@@ -100,11 +114,15 @@ let register (s : State.t) : State.t =
   let s = State.set_user (Some new_account) s in 
   s
 
+(** [restart s] prompts the user to register a newaccount with a new username
+    and password. *)
 let restart (s : State.t) : State.t  = 
   match start_loop () with 
   | Login -> login s
   | Signup -> register s
 
+(** [repl s] is the main terminal of the system. It prints the account name,
+    balances, and prompts the user to either log out or input an order. *)
 let rec repl (s: State.t) : unit = 
   let st = match (State.get_user s) with 
     | None -> restart s
@@ -132,6 +150,8 @@ let rec repl (s: State.t) : unit =
       end in 
   repl st
 
+(** [main] creates a new AccountManager instance, State, and prompts the user
+    to log into an account or register a new one. *)
 let main () : unit =
   let m = AccountManager.create () in
   let s = State.create_state m OrderBook.empty in 
@@ -139,7 +159,6 @@ let main () : unit =
     | Login -> login s
     | Signup -> register s in 
   repl state
-
 
 let () = main ()
 
