@@ -29,6 +29,9 @@ bisect: clean test
 	bisect-ppx-report -I _build -html report bisect0001.out
 	
 docs: docs-public docs-private
+
+zip:
+	zip nasdaq.zip *.ml* _tags .gitignore .ocamlinit .merlin Makefile
 	
 docs-public: build
 	mkdir -p doc.public
