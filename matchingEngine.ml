@@ -11,7 +11,8 @@ module MatchingEngine = struct
 
   let matchorder obook order =
     match OrderBook.get_complement_order order obook with 
-    | None -> [], (OrderBook.insert order obook)
+    | None -> 
+      [], (OrderBook.insert order obook)
     | Some o ->
       let transaction = [(order, o)] in 
       let first_removed = (OrderBook.remove order obook) in

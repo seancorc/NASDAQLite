@@ -1,8 +1,9 @@
-MODULES=account accountManager orderBook matchingEngine
+MODULES=account accountManager orderBook matchingEngine state
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)
 TEST=test.byte
+MAIN=main.byte
 OCAMLBUILD=ocamlbuild -use-ocamlfind -plugin-tag 'package(bisect_ppx-ocamlbuild)'
 PKGS=unix,oUnit,str,qcheck
 
@@ -11,6 +12,12 @@ default: build
 
 build:
 	$(OCAMLBUILD) $(OBJECTS)
+
+main:
+	$(OCAMLBUILD) $(MAIN)
+
+start:
+	$(OCAMLBUILD) $(MAIN) && ./$(MAIN)
 
 test:
 	BISECT_COVERAGE=YES $(OCAMLBUILD) -tag 'debug' $(TEST) && ./$(TEST) -runner sequential
@@ -22,6 +29,9 @@ bisect: clean test
 	bisect-ppx-report -I _build -html report bisect0001.out
 	
 docs: docs-public docs-private
+
+zip:
+	zip nasdaq.zip *.ml* _tags .gitignore .ocamlinit .merlin Makefile
 	
 docs-public: build
 	mkdir -p doc.public

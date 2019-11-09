@@ -61,9 +61,11 @@ module OrderBook : OrderBook = struct
 
   let get_complement_order (o : order) ((b, s) : t) = 
     if o.order_type = Buy then
-      List.find_opt (fun o' -> o'.price = o.price) s
+      List.find_opt (fun o' -> 
+          o'.asset = o.asset && o'.price = o.price) s
     else 
-      List.find_opt (fun o' -> o'.price = o.price) b
+      List.find_opt (fun o' -> 
+          o'.asset = o.asset && o'.price = o.price) b
 
 
   let member (o : order) ((b, s) : t) = 
