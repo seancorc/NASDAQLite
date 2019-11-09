@@ -17,6 +17,6 @@ Enter "login" or "signup" in order to register and use an account.
 Once signed in, you can place an order by typing in the prompted format:
 ordertype,ticker,amount
 
-Ex.
-Buy,AAPL,10.0
+Ex.  
+Buy,AAPL,10.0  
 Sell,AAPL,20.0
