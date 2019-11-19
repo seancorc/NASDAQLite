@@ -1,6 +1,6 @@
 # state accountManager
 
-MODULES=account orderBook matchingEngine accountManager
+MODULES=account orderBook matchingEngine accountManager accountManager
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)
@@ -11,6 +11,8 @@ PKGS=unix,oUnit,str,qcheck
 
 default: build
 	utop
+
+rebuild: clean build
 
 build:
 	$(OCAMLBUILD) $(OBJECTS)
