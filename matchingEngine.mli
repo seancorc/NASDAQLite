@@ -1,18 +1,14 @@
 open OrderBook
 
-
-type transaction = order * order 
-
 module type MatchingEngine = sig 
-
-  (** [matchorder obook order] is a pair with the first element representing 
-      the list of orders that were successfully matched and 
-      the second element representing the resultant orderbook after those 
-      orders have been matched. *)
-  val matchorder: OrderBook.t -> order -> transaction list * OrderBook.t
-
+  type t
+  val create : unit -> t
+  val member : t -> string -> bool
+  val execute_regular_order : t -> order_direction -> order -> string -> unit
+  val execute_market_order : t -> order_direction -> string -> int -> string -> unit
+  val tickers : t -> string list
+  val get_order_book : t -> string -> OrderBook.t
 end
-
 
 (** [MatchingEngine] is the implementation of the MatchingEngine signature*)
 module MatchingEngine : MatchingEngine

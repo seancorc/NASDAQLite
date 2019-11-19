@@ -1,4 +1,6 @@
-MODULES=account accountManager orderBook matchingEngine state
+# state accountManager
+
+MODULES=account orderBook matchingEngine accountManager
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)

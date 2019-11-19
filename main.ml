@@ -1,6 +1,5 @@
 open AccountManager
 open Account
-open State
 open OrderBook
 open MatchingEngine
 
@@ -23,32 +22,32 @@ let startup_action () =
 
 (** [non_option_user s] is the user in State [s] in non-option format.
     Requires: The user in State [s] is not [None]. *)
-let non_option_user (s : State.t) = match State.get_user s with
-  | None -> failwith "This is impossible"
-  | Some u -> u
+(* let non_option_user (s : State.t) = match State.get_user s with
+   | None -> failwith "This is impossible"
+   | Some u -> u *)
 
 (** [update_account am] updates the AccountManager [am]. *)
-let update_account am = function
-  | {asset; price; order_type; username} -> ()
+(* let update_account am = function
+   | {asset; price; order_type; username} -> () *)
 
-(** [execute_order am o] executes the order [o] and updates the user's account
+(* (** [execute_order am o] executes the order [o] and updates the user's account
     in AccountManager [am] based on the order. *)
-let execute_order am o = 
-  match o with 
-  | {asset; price; order_type = Buy; username} -> 
+   let execute_order am o = 
+   match o with 
+   | {asset; price; order_type = Buy; username} -> 
     AccountManager.inc_account_balance am username asset price
-  | {asset; price; order_type = Sell; username} -> 
+   | {asset; price; order_type = Sell; username} -> 
     AccountManager.dec_account_balance am username asset price
 
-(** [parse_txns txns] parses the transaction list [txns] and executes each
+   (** [parse_txns txns] parses the transaction list [txns] and executes each
     order. *)
-let parse_txns (txns: transaction list) am = 
-  match txns with 
-  | [] -> ()
-  | (o1,o2)::t -> 
+   let parse_txns (txns: transaction list) am = 
+   match txns with 
+   | [] -> ()
+   | (o1,o2)::t -> 
     let _ = execute_order am o1 in 
     let _ = execute_order am o2 in 
-    ()
+    () *)
 
 (** [print_balances b] prints each balance in the balance list [b]. *)
 let print_balances b = 
@@ -66,23 +65,13 @@ let print_balances b =
 (** [parse_order s o] parses the input order [o] and updates State [s] based
     on this input. *)
 let rec parse_order (s : State.t) = function 
-  | ["Buy"; t; a] -> 
-    let order = {asset = t; price = (float_of_string a); order_type = Buy; 
-                 username = Account.username (non_option_user s)} in 
-    let (txs, ob) = MatchingEngine.matchorder (State.get_book s) order in 
-    let s = State.set_book ob s in 
-    let _ = parse_txns txs (State.get_manager s) in 
-    s
-  | ["Sell"; t; a] -> 
-    let order = {asset = t; price = (float_of_string a); order_type = Sell; 
-                 username = Account.username (non_option_user s)} in 
-    let (txs, ob) = MatchingEngine.matchorder (State.get_book s) order in 
-    let s = State.set_book ob s in 
-    let _ = parse_txns txs (State.get_manager s) in 
-    s
-  | _ -> 
-    let _ = print_endline "Invalid order" in 
-    s
+  | ["Buy"; t; a] -> {asset = t; price = (float_of_string a); order_type = Buy; 
+                      username = Account.username (non_option_user s)}
+                       s
+  | ["Sell"; t; a] -> {asset = t; price = (float_of_string a); order_type = Sell; 
+                       username = Account.username (non_option_user s)}
+let _ = print_endline "Invalid order" in 
+s
 
 (** [login s] prompts the user to log into their account using their username
     and password. *)

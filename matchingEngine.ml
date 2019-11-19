@@ -2,7 +2,13 @@ open OrderBook
 open AccountManager
 
 module type MatchingEngine = sig 
-  val matchorder: OrderBook.t -> order -> transaction list * OrderBook.t
+  type t
+  val create : unit -> t
+  val member : t -> string -> bool
+  val execute_regular_order : t -> order_direction -> order -> string -> unit
+  val execute_market_order : t -> order_direction -> string -> int -> string -> unit
+  val tickers : t -> string list
+  val get_order_book : t -> string -> OrderBook.t
 end
 
 exception UnboundTicker
@@ -22,7 +28,7 @@ end
 
 module D = Hashtbl.Make(StringHash)
 
-module MatchingEngine = struct
+module MatchingEngine : MatchingEngine = struct
 
   type t = {
     orderbooks: OrderBook.t D.t;
@@ -46,7 +52,7 @@ module MatchingEngine = struct
       account_manager = am;
     }
 
-  let member (me: t) ticker = 
+  let member (me: t) (ticker: string) : bool = 
     let obs = me.orderbooks in D.mem obs ticker
 
   let tickers (me: t) : string list = 
@@ -89,30 +95,55 @@ module MatchingEngine = struct
   let update_orderbook (me: t) (ticker: string) (ob: OrderBook.t) : unit = 
     D.replace me.orderbooks ticker ob 
 
-  let rec process_transactions (am: t) (txs: transaction list) (ticker: string) : unit = 
+  let process_transaction (am: AccountManager.t) (tx: float * int * string * string) (ticker: string) : unit = 
+    match tx with 
+    | p, amt, b, s -> 
+      begin 
+        let amt' = float_of_int amt in 
+        let total_amount = p *. amt' in 
+        let _ = AccountManager.dec_account_balance am b total_amount in 
+        let _ = AccountManager.inc_account_balance am s total_amount in 
+        let _ = AccountManager.inc_account_position am b ticker amt in 
+        let _ = AccountManager.dec_account_position am s ticker amt in 
+        ()
+      end
+
+
+  let rec process_transactions (am: AccountManager.t) (txs: transaction list) (ticker: string) : unit = 
     match txs with 
     | tx :: t -> 
-      let p, amount, addr_b, addr_s = tx in 
+      process_transaction am tx ticker;
+      process_transactions am t ticker;
       ()
     | [] -> ()
 
   let execute_regular_order (me: t) (direction: order_direction) (order: order) 
       (ticker: string) : unit = 
-    failwith ""
+    let am = me.account_manager in 
+    let _ = receive_order me direction order ticker in 
+    let (txs, ob') = parse_order_book me ticker in 
+    let _ = process_transactions am txs ticker in 
+    let _ = update_orderbook me ticker ob' in
+    ()
 
+  (* let rec execute_market_sell (me: AccountManager.t) (ob: OrderBook.t) (amount: int) : OrderBook.t = 
+     let best_bid, ob' = OrderBook.pop_best_bid ob in 
+     match best_bid with 
+     | Some order -> begin
+        (* let (addr, o_amt, price, time) = order in 
+           let tx_amount = min o_amt amount in 
+           let tx = price, tx_amount, addr  *)
+        ob'
+      end
+     | None -> ob'
 
+     let execute_market_buy (me: AccountManager.t) (ob: OrderBook.t) (amount: int) : OrderBook.t = 
+     failwith "" *)
 
-  let execute_market_order direction order ticker : unit = failwith ""
-
-
-  (* 
-  let matchorder obook order =
-    match OrderBook.get_complement_order order obook with 
-    | None -> 
-      [], (OrderBook.insert order obook)
-    | Some o ->
-      let transaction = [(order, o)] in 
-      let first_removed = (OrderBook.remove order obook) in
-      let final_book = OrderBook.remove o first_removed in 
-      transaction, final_book *)
+  let execute_market_order (me: t) (direction: order_direction) (ticker: string) (amount: int) (addr: string): unit = 
+    let order = match direction with 
+      | Buy -> (addr, amount, max_float, Unix.time ())
+      | Sell -> (addr, amount, min_float, Unix.time ())in 
+    let _ = execute_regular_order me direction order ticker in 
+    ()
 end
