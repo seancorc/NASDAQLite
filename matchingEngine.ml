@@ -9,6 +9,7 @@ module type MatchingEngine = sig
   val execute_market_order : t -> order_direction -> string -> int -> string -> unit
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
+  val get_account_manager : t -> AccountManager.t
 end
 
 exception UnboundTicker
@@ -51,6 +52,8 @@ module MatchingEngine : MatchingEngine = struct
       orderbooks = obs;
       account_manager = am;
     }
+
+  let get_account_manager (me: t) = me.account_manager
 
   let member (me: t) (ticker: string) : bool = 
     let obs = me.orderbooks in D.mem obs ticker

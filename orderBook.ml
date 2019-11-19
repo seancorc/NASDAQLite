@@ -8,7 +8,7 @@ type price = float
 
 type amount = int
 
-type order = address * int * float * time
+type order = address * int * price * time
 
 type submitted_order = order_direction * order
 
