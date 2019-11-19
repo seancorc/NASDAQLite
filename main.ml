@@ -3,6 +3,8 @@ open Account
 open OrderBook
 open MatchingEngine
 
+type state = {current_account: Account.t option; account_manager : AccountManager.t; matching_engine: MatchingEngine.t}
+
 type action = Login | Signup 
 
 (** [start_loop] is the eithier the Login or Signup action depending on the 
@@ -56,7 +58,7 @@ let print_balances b =
       let (s, f) = a in 
       let _ = print_string s in 
       let _ = print_string ":" in 
-      let _ = print_float f in 
+      let _ = print_int f in 
       print_string "; ") b in 
   let _ = print_string "]" in 
   let _ = print_newline () in 
@@ -64,25 +66,20 @@ let print_balances b =
 
 (** [parse_order s o] parses the input order [o] and updates State [s] based
     on this input. *)
-let rec parse_order (s : State.t) = function 
-  | ["Buy"; t; a] -> {asset = t; price = (float_of_string a); order_type = Buy; 
-                      username = Account.username (non_option_user s)}
-                       s
-  | ["Sell"; t; a] -> {asset = t; price = (float_of_string a); order_type = Sell; 
-                       username = Account.username (non_option_user s)}
-let _ = print_endline "Invalid order" in 
-s
+(* let rec parse_order username = function 
+   | ["Buy"; t; a] -> (username, a)
+   | ["Sell"; t; a] -> {asset = t; price = (float_of_string a); order_type = Sell; username = username} *)
 
 (** [login s] prompts the user to log into their account using their username
     and password. *)
-let login (s : State.t) : State.t = 
+let login (s : state) : state = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
   print_string "Password: ";
   let password = (read_line ()) in
   try 
-    let account = AccountManager.login (State.get_manager s) username password in 
-    (State.set_user (Some account) s)
+    let account = AccountManager.login (s.account_manager) username password in 
+    {s with current_account =  Some account}
   with 
   | InvalidPassword ->
     let _ =  print_endline "Incorrect Password" in 
@@ -93,48 +90,65 @@ let login (s : State.t) : State.t =
 
 (** [register s] prompts the user to register a newaccount with a new username
     and password. *)
-let register (s : State.t) : State.t = 
+let register (s : state) : state = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
   print_string "Password: ";
   let password = (read_line ()) in 
-  let new_account = AccountManager.register (State.get_manager s) username 
+  let new_account = AccountManager.register (s.account_manager) username 
       password in 
-  let s = State.set_user (Some new_account) s in 
+  let s = {s with current_account = (Some new_account)} in 
   s
 
 (** [restart s] prompts the user to register a newaccount with a new username
     and password. *)
-let restart (s : State.t) : State.t  = 
+let restart (s : state) : state  = 
   match start_loop () with 
   | Login -> login s
   | Signup -> register s
+(* 
+let parse_details usr amount price = 
+let amount' = int_of_string amount in 
+let price' = float_of_string in 
+(usr, ) *)
+
+let parse_order (usr: string) (lst: string list) : submitted_order option = 
+  try
+    begin
+      match lst with 
+      | ["Buy"; ticker; amount; price] -> failwith ""
+      | ["Sell"; ticker; amount; price] -> failwith ""
+      | _ -> None
+    end
+  with exn -> None
 
 (** [repl s] is the main terminal of the system. It prints the account name,
     balances, and prompts the user to either log out or input an order. *)
-let rec repl (s: State.t) : unit = 
-  let st = match (State.get_user s) with 
+let rec repl (s: state) : unit = 
+  let st = match s.current_account with 
     | None -> restart s
     | Some user -> begin
         print_newline (); print_endline ("Account: " ^ Account.username user); 
-        let balances = Account.balances user in 
+        let balances = Account.positions user in 
+        let usd_balance = Account.balance user in 
+        let balances = ("USD", (int_of_float usd_balance)) :: balances in 
         let _ = print_balances balances in 
         print_endline "To log out of this account, type 'logout'";
         print_endline "To place an order input: order type,ticker,amount";
         let i = (read_line ()) in 
         match String.trim i with 
         | "logout" -> 
-          let updated_state = State.set_user None s in 
-          updated_state
+          {s with current_account = None}
         | a -> 
           begin 
+            (* Buy/Sell ticker amount price *)
             let lst = String.split_on_char ',' a in 
-            if List.length lst <> 3 then 
+            if List.length lst <> 4 then 
               let _ = print_endline "Invalid order" in 
               s
             else
-              let updated_state = parse_order s lst in 
-              updated_state
+              let order = parse_order Account.username lst in 
+              s
           end
       end in 
   repl st
