@@ -11,5 +11,5 @@ module type MatchingEngine = sig
   val get_account_manager : t -> AccountManager.AccountManager.t
 end
 
-(** [MatchingEngine] is the implementation of the MatchingEngine signature*)
+(** [MatchingEngine] is the implementation of the MatchingEngine signature *)
 module MatchingEngine : MatchingEngine

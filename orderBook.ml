@@ -1,19 +1,11 @@
 type order_direction = Buy | Sell
 
-type address = string
-
-type time = float
-
-type price = float
-
-type amount = int
-
-type order = address * int * price * time
+type order = string * int * float * float
 
 type submitted_order = order_direction * order
 
 (* [(price, amount, address_buyer, address_seller)] *)
-type transaction = price * amount * address * address 
+type transaction = float * int * string * string 
 
 
 module type OrderBook = sig
@@ -29,10 +21,7 @@ module type OrderBook = sig
   val pop_best_offer : t -> order option * t
   val pop_best_bid : t -> order option * t
   val construct_tx : t -> transaction option * t
-  (* val insert : order -> t -> t
-     val member : order -> t -> bool
-     val get_complement_order : order -> t -> order option
-     val remove : order -> t -> t *)
+
 end
 
 module OrderBook : OrderBook = struct 
@@ -40,7 +29,9 @@ module OrderBook : OrderBook = struct
        AF: Represents OrderBook as as a tuple of two lists of type [order] 
        elements. 
        RI: All of the orders in first list are  buy orders and all of the orders
-       in the second list are sell orders. *)
+       in the second list are sell orders. 
+       Orders are stored in preference order with better prices always at the 
+       front of the list. *)
   type t = order list * order list
 
   let empty = ([], [])
@@ -163,43 +154,5 @@ module OrderBook : OrderBook = struct
           end
         else None, ob
       end
-
-
-  (* let insert (o : order) ((b, s) : t) = 
-     match o with 
-     | {asset; price; order_type; username} -> 
-      if order_type = Buy then (o :: b, s)
-      else (b, o :: s)
-
-     let member_helper (o : order) (lst : order list) = 
-     List.fold_left (fun acc elt -> if elt = o 
-                     then true || acc else false || acc) false lst
-
-     let get_complement_order (o : order) ((b, s) : t) = 
-     if o.order_type = Buy then
-      List.find_opt (fun o' -> 
-          o'.asset = o.asset && o'.price = o.price) s
-     else 
-      List.find_opt (fun o' -> 
-          o'.asset = o.asset && o'.price = o.price) b
-
-
-     let member (o : order) ((b, s) : t) = 
-     match o with 
-     | {asset; price; order_type = Buy; username} -> 
-      List.fold_left (fun acc elt -> if elt = o
-                       then true || acc else false || acc) false b
-     | {asset; price; order_type = Sell; username} ->
-      List.fold_left (fun acc elt -> if elt = o 
-                       then true || acc else false || acc) false s
-
-     (** [remove_helper o lst] removes order [o] from order list [lst]. *)
-     let remove_helper (o : order) (lst : order list) = 
-     List.filter (fun elt -> not (elt = o)) lst
-
-     let remove (o : order) ((b, s) : t) = 
-     match o with 
-     | {asset; price; order_type = Buy; username} -> (remove_helper o b, s)
-     | {asset; price; order_type = Sell; username} -> (b, remove_helper o s) *)
 end
 

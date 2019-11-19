@@ -22,35 +22,6 @@ let startup_action () =
   print_endline ("Welcome to NASDAQLite!"); 
   start_loop ()
 
-(** [non_option_user s] is the user in State [s] in non-option format.
-    Requires: The user in State [s] is not [None]. *)
-(* let non_option_user (s : State.t) = match State.get_user s with
-   | None -> failwith "This is impossible"
-   | Some u -> u *)
-
-(** [update_account am] updates the AccountManager [am]. *)
-(* let update_account am = function
-   | {asset; price; order_type; username} -> () *)
-
-(* (** [execute_order am o] executes the order [o] and updates the user's account
-    in AccountManager [am] based on the order. *)
-   let execute_order am o = 
-   match o with 
-   | {asset; price; order_type = Buy; username} -> 
-    AccountManager.inc_account_balance am username asset price
-   | {asset; price; order_type = Sell; username} -> 
-    AccountManager.dec_account_balance am username asset price
-
-   (** [parse_txns txns] parses the transaction list [txns] and executes each
-    order. *)
-   let parse_txns (txns: transaction list) am = 
-   match txns with 
-   | [] -> ()
-   | (o1,o2)::t -> 
-    let _ = execute_order am o1 in 
-    let _ = execute_order am o2 in 
-    () *)
-
 (** [print_balances b] prints each balance in the balance list [b]. *)
 let print_balances b = 
   let _ = print_string "Balances: [" in 
@@ -63,12 +34,6 @@ let print_balances b =
   let _ = print_string "]" in 
   let _ = print_newline () in 
   ()
-
-(** [parse_order s o] parses the input order [o] and updates State [s] based
-    on this input. *)
-(* let rec parse_order username = function 
-   | ["Buy"; t; a] -> (username, a)
-   | ["Sell"; t; a] -> {asset = t; price = (float_of_string a); order_type = Sell; username = username} *)
 
 (** [login s] prompts the user to log into their account using their username
     and password. *)
@@ -106,11 +71,6 @@ let restart (s : state) : state  =
   match start_loop () with 
   | Login -> login s
   | Signup -> register s
-(* 
-let parse_details usr amount price = 
-let amount' = int_of_string amount in 
-let price' = float_of_string in 
-(usr, ) *)
 
 let parse_order (usr: string) (lst: string list) : (string * submitted_order) option = 
   try
