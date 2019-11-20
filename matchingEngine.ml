@@ -129,20 +129,6 @@ module MatchingEngine : MatchingEngine = struct
     let _ = update_orderbook me ticker ob' in
     ()
 
-  (* let rec execute_market_sell (me: AccountManager.t) (ob: OrderBook.t) (amount: int) : OrderBook.t = 
-     let best_bid, ob' = OrderBook.pop_best_bid ob in 
-     match best_bid with 
-     | Some order -> begin
-        (* let (addr, o_amt, price, time) = order in 
-           let tx_amount = min o_amt amount in 
-           let tx = price, tx_amount, addr  *)
-        ob'
-      end
-     | None -> ob'
-
-     let execute_market_buy (me: AccountManager.t) (ob: OrderBook.t) (amount: int) : OrderBook.t = 
-     failwith "" *)
-
   let execute_market_order (me: t) (direction: order_direction) (ticker: string) (amount: int) (addr: string): unit = 
     let order = match direction with 
       | Buy -> (addr, amount, max_float, Unix.time ())
