@@ -10,6 +10,7 @@ module type MatchingEngine = sig
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
   val load_from_dir : string -> t
+  val write_to_dir : string -> t -> unit
   val get_account_manager : t -> AccountManager.t
 end
 
@@ -82,7 +83,7 @@ module MatchingEngine : MatchingEngine = struct
 
   let populate_orders_for_direction me ticker direction ic =
     let line = input_line ic in
-    if line = "endticker" then () else 
+    if line = "endticker" || line = "" then () else 
       let lst = String.split_on_char ',' line in
       let rec add_orders lst =
         match lst with 
@@ -92,7 +93,8 @@ module MatchingEngine : MatchingEngine = struct
           let price = float_of_string p in
           let time = float_of_string t in
           let order = (u,amount,price,time) in
-          receive_order me direction order ticker  
+          receive_order me direction order ticker;
+          add_orders r
         | _ -> raise (Invalid_argument "Bad File") 
       in
       add_orders lst
@@ -128,6 +130,42 @@ module MatchingEngine : MatchingEngine = struct
     populate_engine me ic;
     me
 
+  let rec get_output_channel handle dirname = 
+    let filename = Unix.readdir handle in
+    match filename with 
+    | "orders.csv" -> 
+      open_out (dirname ^ Filename.dir_sep ^ filename)
+    | s -> get_output_channel handle dirname
+
+  let to_list (m: OrderBook.t D.t) = 
+    D.fold (fun k v l -> (k,v) :: l) m [] 
+
+  let rec write_orders oc buys = 
+    match buys with 
+    | [] -> ()
+    | (user,amt,price,time) :: t ->
+      let trailing = if List.length t = 0 then "" else "," in
+      Printf.fprintf oc "%s,%d,%f,%f%s" user amt price time trailing;
+      write_orders oc t
+
+  let write_to_dir dirname me = 
+    let oc = get_output_channel (Unix.opendir dirname) dirname in
+    let orderbooks = (to_list me.orderbooks) in
+    let rec write_file obs = 
+      match obs with 
+      | [] -> close_out oc;
+      | (ticker, ob) :: t ->
+        Printf.fprintf oc "%s\n" ticker;
+        Printf.fprintf oc "buy\n";
+        let buys = OrderBook.buys ob in
+        write_orders oc buys;
+        Printf.fprintf oc "\nsell\n";
+        let sells = OrderBook.sells ob in
+        write_orders oc sells;
+        Printf.fprintf oc "endticker\n";
+        write_file t;
+    in write_file orderbooks;
+    ()
 
   let rec repeat_parse (ob: OrderBook.t) (acc: transaction list) 
     : (transaction list) * OrderBook.t = 

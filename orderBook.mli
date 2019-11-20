@@ -22,6 +22,8 @@ module type OrderBook = sig
   val is_empty : t -> bool
   val no_buys : t -> bool
   val no_sells : t -> bool
+  val buys : t -> order list
+  val sells : t -> order list
   val size : t -> int
   val insert_order : t -> submitted_order -> t
   val best_bid : t -> order option

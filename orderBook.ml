@@ -15,6 +15,8 @@ module type OrderBook = sig
   val is_empty : t -> bool
   val no_buys : t -> bool
   val no_sells : t -> bool
+  val buys : t -> order list
+  val sells : t -> order list
   val size : t -> int
   val insert_order : t -> submitted_order -> t
   val best_bid : t -> order option
@@ -48,6 +50,12 @@ module OrderBook : OrderBook = struct
   let no_sells = function 
     | (_, []) -> true
     | _ -> false
+
+  let buys ((b, _) : t) = 
+    b
+
+  let sells ((_, s) : t) = 
+    s
 
   let size ((b, s) : t) = 
     List.fold_left (fun acc x -> acc + 1) 0 b + 
