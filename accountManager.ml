@@ -87,7 +87,6 @@ module AccountManager : AccountManager = struct
       let username = input_line ic in
       let hashed_pass = input_line ic in
       let balance = input_line ic in
-      print_endline balance;
       let account = Account.create username (float_of_string balance) in 
       let _ = D.add am username (account, (Bcrypt.hash_of_string hashed_pass)) in 
       get_orders_from_line ic account;
