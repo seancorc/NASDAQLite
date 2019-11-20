@@ -72,20 +72,22 @@ module AccountManager : AccountManager = struct
     Account.set_balance account a
 
   let rec get_orders_from_line ic acct =
-    let order_name = input_line ic in (** Never have ordername without matching position*)
-    let position = input_line ic in
-    print_endline order_name;
-    print_endline position;
-    if position = "enduser" then () else
-      Account.set_position acct order_name (int_of_string position);
-    get_orders_from_line ic acct;
-    ()
+    let order_name = input_line ic in
+    if order_name = "enduser" then  ()
+    else  
+      let position = input_line ic in
+      if position = "enduser" then  () 
+      else
+        Account.set_position acct order_name (int_of_string position);
+      get_orders_from_line ic acct;
+      ()
 
   let rec populate_manager am ic = 
     try 
       let username = input_line ic in
       let hashed_pass = input_line ic in
       let balance = input_line ic in
+      print_endline balance;
       let account = Account.create username (float_of_string balance) in 
       let _ = D.add am username (account, (Bcrypt.hash_of_string hashed_pass)) in 
       get_orders_from_line ic account;
@@ -112,12 +114,19 @@ module AccountManager : AccountManager = struct
   let rec get_output_channel handle dirname = 
     let filename = Unix.readdir handle in
     match filename with 
-    | "orderbook.csv" -> 
+    | "accounts.csv" -> 
       open_out (dirname ^ Filename.dir_sep ^ filename)
     | s -> get_output_channel handle dirname
 
   let to_list (m: t) : (Account.t * Bcrypt.hash) list = 
     D.fold (fun k v l -> v :: l) m [] 
+
+  let rec write_positions oc pss = 
+    match pss with 
+    | [] -> ()
+    | (name, pos) :: t ->
+      Printf.fprintf oc "%s\n%d\n" name pos;
+      write_positions oc t
 
   let rec write_accounts_to_dir dirname am = 
     let full_am_list = to_list am in
@@ -125,11 +134,13 @@ module AccountManager : AccountManager = struct
     let rec populate_file am_list = 
       match am_list with
       | [] -> close_out oc;
-      | h :: t -> 
-        let username = Account.username (fst h) in 
-        let hashed_password = Bcrypt.string_of_hash (snd h) in
-        let balance = Account.balance (fst h) in
+      | (acct, pass) :: t -> 
+        let username = Account.username acct in 
+        let hashed_password = Bcrypt.string_of_hash pass in
+        let balance = Account.balance acct in
         Printf.fprintf oc "%s\n%s\n%s\n" username hashed_password (string_of_float balance);
+        write_positions oc (Account.positions acct);
+        Printf.fprintf oc "enduser\n";
         populate_file t
     in populate_file full_am_list
 
