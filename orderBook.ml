@@ -1,5 +1,6 @@
 type order_direction = Buy | Sell
 
+(** username, amount, price, time*)
 type order = string * int * float * float
 
 type submitted_order = order_direction * order

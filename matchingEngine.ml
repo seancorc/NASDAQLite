@@ -9,6 +9,7 @@ module type MatchingEngine = sig
   val execute_market_order : t -> order_direction -> string -> int -> string -> unit
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
+  val load_from_dir : string -> t
   val get_account_manager : t -> AccountManager.t
 end
 
@@ -78,6 +79,55 @@ module MatchingEngine : MatchingEngine = struct
       let ob' = OrderBook.insert_order ob submit_order in 
       D.replace obs ticker ob'
     else raise UnboundTicker
+
+  let populate_orders_for_direction me ticker direction ic =
+    let line = input_line ic in
+    if line = "endticker" then () else 
+      let lst = String.split_on_char ',' line in
+      let rec add_orders lst =
+        match lst with 
+        | [] -> ()
+        | u :: a :: p :: t :: r -> 
+          let amount = int_of_string a in
+          let price = float_of_string p in
+          let time = float_of_string t in
+          let order = (u,amount,price,time) in
+          receive_order me direction order ticker  
+        | _ -> raise (Invalid_argument "Bad File") 
+      in
+      add_orders lst
+
+  let rec populate_ticker_for_direction me ic ticker direction = 
+    populate_orders_for_direction me ticker direction ic; 
+    ()
+
+  let rec populate_engine me ic = 
+    try 
+      let ticker = input_line ic in
+      let direction = if (input_line ic) = "buy" then Buy else Sell in
+      populate_ticker_for_direction me ic ticker direction;
+      let next_direction = if (input_line ic) = "buy" then Buy else Sell in
+      populate_ticker_for_direction me ic ticker next_direction;
+      populate_engine me ic;
+    with e ->
+      if e = End_of_file then ()
+      else raise e
+
+  (** Searches for file 'orders.csv' and returns input_channel associated 
+      with that file *)
+  let rec get_input_channel handle dirname = 
+    let filename = Unix.readdir handle in
+    match filename with 
+    | "orders.csv" -> 
+      open_in (dirname ^ Filename.dir_sep ^ filename)
+    | s -> get_input_channel handle dirname
+
+  let load_from_dir dirname = 
+    let ic = get_input_channel (Unix.opendir dirname) dirname in
+    let me = create () in
+    populate_engine me ic;
+    me
+
 
   let rec repeat_parse (ob: OrderBook.t) (acc: transaction list) 
     : (transaction list) * OrderBook.t = 
