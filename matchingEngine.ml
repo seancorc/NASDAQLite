@@ -49,7 +49,7 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    let am = AccountManager.create () in 
+    let am = AccountManager.load_from_dir "data" in 
     {
       orderbooks = obs;
       account_manager = am;
