@@ -4,23 +4,17 @@ module type AccountManager = sig
   type t
   val create : unit -> t
   val register : t -> string -> string -> Account.t
-                                          <<<<<<< HEAD
+  val load_from_dir : string -> t
+  val write_accounts_to_dir : string -> t -> unit
   val set_account_balance : t -> string -> float -> unit
   val inc_account_balance : t -> string -> float -> unit
   val dec_account_balance : t -> string -> float -> unit
   val set_account_position : t -> string -> string -> int -> unit
   val inc_account_position : t -> string -> string -> int -> unit
   val dec_account_position : t -> string -> string -> int -> unit
-                                                             =======
-  val set_account_balance : t -> string -> string -> float -> unit
-  val load_from_dir : string -> t
-  val write_accounts_to_dir : string -> t -> unit
-  val inc_account_balance : t -> string -> string -> float -> unit
-  val dec_account_balance : t -> string -> string -> float -> unit
-    >>>>>>> Implement write accounts to file
-val login : t -> string -> string -> Account.t
-val delete_user : t -> string -> string -> unit
-val accounts : t -> string list
+  val login : t -> string -> string -> Account.t
+  val delete_user : t -> string -> string -> unit
+  val accounts : t -> string list
 end
 
 (** [StringHash] is a module representing a HashedType using String as the key*)
@@ -75,17 +69,26 @@ module AccountManager : AccountManager = struct
 
   let set_account_balance (m: t) (username: string) (a: float) = 
     let (account, _) = D.find m username in 
-    Account.set_balance account t a
+    Account.set_balance account a
+
+  let rec get_orders_from_line ic acct =
+    let order_name = input_line ic in (** Never have ordername without matching position*)
+    let position = input_line ic in
+    print_endline order_name;
+    print_endline position;
+    if position = "enduser" then () else
+      Account.set_position acct order_name (int_of_string position);
+    get_orders_from_line ic acct;
+    ()
 
   let rec populate_manager am ic = 
     try 
-      let line = input_line ic in
-      let comma_index = String.index line ',' in
-      let username = String.sub line 0 comma_index in
-      let pass_lenth = (String.length line - (String.length username) - 1) in
-      let hashed_pass = String.sub line (comma_index + 1) pass_lenth in
-      let account = Account.create username in 
+      let username = input_line ic in
+      let hashed_pass = input_line ic in
+      let balance = input_line ic in
+      let account = Account.create username (float_of_string balance) in 
       let _ = D.add am username (account, (Bcrypt.hash_of_string hashed_pass)) in 
+      get_orders_from_line ic account;
       populate_manager am ic;
     with e ->
       if e = End_of_file then ()
@@ -109,12 +112,12 @@ module AccountManager : AccountManager = struct
   let rec get_output_channel handle dirname = 
     let filename = Unix.readdir handle in
     match filename with 
-    | "accounts.csv" -> 
+    | "orderbook.csv" -> 
       open_out (dirname ^ Filename.dir_sep ^ filename)
     | s -> get_output_channel handle dirname
 
   let to_list (m: t) : (Account.t * Bcrypt.hash) list = 
-    D.fold (fun k v l -> v :: l) m []
+    D.fold (fun k v l -> v :: l) m [] 
 
   let rec write_accounts_to_dir dirname am = 
     let full_am_list = to_list am in
@@ -124,15 +127,18 @@ module AccountManager : AccountManager = struct
       | [] -> close_out oc;
       | h :: t -> 
         let username = Account.username (fst h) in 
-
         let hashed_password = Bcrypt.string_of_hash (snd h) in
-        Printf.fprintf oc "%s,%s\n" username hashed_password;
+        let balance = Account.balance (fst h) in
+        Printf.fprintf oc "%s\n%s\n%s\n" username hashed_password (string_of_float balance);
         populate_file t
     in populate_file full_am_list
 
 
+  let set_account_balance (m: t) (username: string) (a: float) = 
+    let (account, _) = D.find m username in 
+    Account.set_balance account a
 
-  let inc_account_balance (m: t) (username: string) (t: string) (a: float) = 
+  let inc_account_balance (m: t) (username: string) (a: float) = 
     let (account, _) = D.find m username in 
     let cur_balance = Account.balance account in 
     let new_balance = cur_balance +. a in 
