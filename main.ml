@@ -92,7 +92,7 @@ let prompt_user_input (user: Account.t): string =
   let balances = ("USD", (int_of_float usd_balance)) :: balances in 
   let _ = print_balances balances in 
   print_endline "To log out of this account, type 'logout'";
-  print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, amount (only for Buy or Sell)";
+  print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, amount, price (only for Buy or Sell)";
   read_line ()
 
 let read_input s user input = 
