@@ -105,7 +105,9 @@ module MatchingEngine : MatchingEngine = struct
 
   let rec populate_engine me ic = 
     try 
-      let ticker = input_line ic in
+      let ticker_or_end = input_line ic in 
+      let ticker = if ticker_or_end = "endticker" then (input_line ic) 
+        else ticker_or_end in
       let direction = if (input_line ic) = "buy" then Buy else Sell in
       populate_ticker_for_direction me ic ticker direction;
       let next_direction = if (input_line ic) = "buy" then Buy else Sell in
@@ -162,7 +164,7 @@ module MatchingEngine : MatchingEngine = struct
         Printf.fprintf oc "\nsell\n";
         let sells = OrderBook.sells ob in
         write_orders oc sells;
-        Printf.fprintf oc "endticker\n";
+        Printf.fprintf oc "\nendticker\n";
         write_file t;
     in write_file orderbooks;
     ()
