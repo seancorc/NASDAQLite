@@ -32,6 +32,10 @@ module type OrderBook = sig
         false otherwise. *)
   val no_sells : t -> bool
 
+  val buys : t -> order list
+  
+  val sells : t -> order list
+
   (** [size ob] is the total number of orders in the orderbook [ob]. *)
   val size : t -> int
 

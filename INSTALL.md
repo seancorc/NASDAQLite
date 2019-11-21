@@ -3,7 +3,6 @@ Install third party libraries:
 Run the following command to install safepass:
 ```opam install safepass```
 
-
 In order to run the code, enter the following command:
 
 ```make start```
