@@ -89,14 +89,18 @@ let prompt_user_input (user: Account.t): string =
   let usd_balance = Account.balance user in 
   let balances = ("USD", (int_of_float usd_balance)) :: balances in 
   let _ = print_balances balances in 
-  print_endline "To log out of this account, type 'logout'";
+  print_endline "To log out of this account, type 'logout' and to save&exit type 'quit'";
   print_endline "To place an order input: order type,ticker,amount";
   read_line ()
 
-let read_input s user input = 
+let read_input s user input am me = 
   match String.trim input with 
   | "logout" -> 
     {s with current_account = None}
+  | "quit" ->
+    AccountManager.write_accounts_to_dir "data" am;
+    MatchingEngine.write_to_dir "data" me;
+    Stdlib.exit 0;
   | a -> 
     begin 
       (* Buy/Sell ticker amount price *)
@@ -124,20 +128,30 @@ let rec repl (s: state) : unit =
     | Some user -> 
       begin
         let input = prompt_user_input user in 
-        let updated_state = read_input s user input in 
+        let updated_state = read_input s user input s.account_manager s.matching_engine in 
         updated_state
       end in 
   repl st
 
-let me = MatchingEngine.create ()
-let am = MatchingEngine.get_account_manager me
-
-let empty_state = {current_account = None ; account_manager = am; matching_engine = me}
+let inital_state () =
+  try 
+    let me = MatchingEngine.load_from_dir "data" in
+    let am = MatchingEngine.get_account_manager me in
+    {current_account = None ; account_manager = am; matching_engine = me}
+  with e ->
+    let dirname = "data" in
+    let accounts_file_name = "accounts.csv" in
+    let orders_file_name = "orders.csv" in
+    Unix.mkdir dirname 0o775;
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ orders_file_name) in
+    {current_account = None ; account_manager = AccountManager.create (); 
+     matching_engine = MatchingEngine.create ()}
 
 (** [main] creates a new AccountManager instance, State, and prompts the user
     to log into an account or register a new one. *)
 let main () : unit =
-  let s = empty_state in 
+  let s = inital_state () in 
   let state = match startup_action () with 
     | Login -> login s
     | Signup -> register s in 
