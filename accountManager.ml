@@ -67,10 +67,6 @@ module AccountManager : AccountManager = struct
       let _ = D.add m username (account, (hash_pw password)) in 
       account
 
-  let set_account_balance (m: t) (username: string) (a: float) = 
-    let (account, _) = D.find m username in 
-    Account.set_balance account a
-
   let rec get_orders_from_line ic acct =
     let order_name = input_line ic in
     if order_name = "enduser" then  ()
