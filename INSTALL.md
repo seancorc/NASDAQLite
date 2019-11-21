@@ -3,8 +3,6 @@ Install third party libraries:
 Run the following command to install safepass:
 ```opam install safepass```
 
-Create a directory and add two files: 'accounts.csv' and 'orders.csv'
-
 In order to run the code, enter the following command:
 
 ```make start```

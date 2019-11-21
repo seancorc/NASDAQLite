@@ -133,15 +133,25 @@ let rec repl (s: state) : unit =
       end in 
   repl st
 
-let me = MatchingEngine.load_from_dir "data"
-let am = MatchingEngine.get_account_manager me
-
-let empty_state = {current_account = None ; account_manager = am; matching_engine = me}
+let inital_state () =
+  try 
+    let me = MatchingEngine.load_from_dir "data" in
+    let am = MatchingEngine.get_account_manager me in
+    {current_account = None ; account_manager = am; matching_engine = me}
+  with e ->
+    let dirname = "data" in
+    let accounts_file_name = "accounts.csv" in
+    let orders_file_name = "orders.csv" in
+    Unix.mkdir dirname 0o775;
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ orders_file_name) in
+    {current_account = None ; account_manager = AccountManager.create (); 
+     matching_engine = MatchingEngine.create ()}
 
 (** [main] creates a new AccountManager instance, State, and prompts the user
     to log into an account or register a new one. *)
 let main () : unit =
-  let s = empty_state in 
+  let s = inital_state () in 
   let state = match startup_action () with 
     | Login -> login s
     | Signup -> register s in 
