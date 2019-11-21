@@ -208,13 +208,22 @@ module MatchingEngine : MatchingEngine = struct
       ()
     | [] -> ()
 
+  let clear_market_orders (ob: OrderBook.t) = 
+    match OrderBook.best_bid ob, OrderBook.best_offer ob with 
+    | Some (_, _, price, _), _ when price = max_float -> 
+      let _, ob' = OrderBook.pop_best_bid ob in ob'
+    | _, Some (_,_,price,_) when price = min_float -> 
+      let _, ob' = OrderBook.pop_best_offer ob in ob'
+    | _ -> ob
+
   let execute_regular_order (me: t) (direction: order_direction) (order: order) 
       (ticker: string) : unit = 
     let am = me.account_manager in 
     let _ = receive_order me direction order ticker in 
     let (txs, ob') = parse_order_book me ticker in 
     let _ = process_transactions am txs ticker in 
-    let _ = update_orderbook me ticker ob' in
+    let ob1 = clear_market_orders ob' in
+    let _ = update_orderbook me ticker ob1 in
     ()
 
   let execute_market_order (me: t) (direction: order_direction) (ticker: string) (amount: int) (addr: string): unit = 

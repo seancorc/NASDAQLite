@@ -78,6 +78,8 @@ let parse_order (usr: string) (lst: string list) : (string * submitted_order) op
       let ticker, submitted_order = match lst with 
         | ["Buy"; ticker; amount; price] -> ticker, (Buy, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
         | ["Sell"; ticker; amount; price] -> ticker, (Sell, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
+        | ["Buy Market"; ticker; amount] -> ticker, (Buy, (usr, (int_of_string amount), max_float, (Unix.time ())))
+        | ["Sell Market"; ticker; amount] -> ticker, (Sell, (usr, (int_of_string amount), min_float, (Unix.time ())))
         | _ -> raise Not_found in 
       Some ((ticker, submitted_order))
     end
@@ -90,7 +92,7 @@ let prompt_user_input (user: Account.t): string =
   let balances = ("USD", (int_of_float usd_balance)) :: balances in 
   let _ = print_balances balances in 
   print_endline "To log out of this account, type 'logout' and to save&exit type 'quit'";
-  print_endline "To place an order input: order type,ticker,amount";
+  print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, order size, price (only for Buy or Sell)";
   read_line ()
 
 let read_input s user input am me = 
@@ -105,19 +107,18 @@ let read_input s user input am me =
     begin 
       (* Buy/Sell ticker amount price *)
       let lst = String.split_on_char ',' a in 
-      if List.length lst <> 4 then 
-        let _ = print_endline "Invalid order" in 
-        s
-      else
-        let parsed_order = parse_order (Account.username user) lst in 
-        match parsed_order with 
-        | None -> print_endline "Invalid order"; s
-        | Some (ticker, submitted_order) ->
-          begin
+      let lst' = List.map (String.trim) lst in
+      let parsed_order = parse_order (Account.username user) lst' in 
+      match parsed_order with 
+      | None -> print_endline "Invalid order"; s
+      | Some (ticker, submitted_order) ->
+        begin
+          let tickers = MatchingEngine.tickers s.matching_engine in 
+          if not (List.mem ticker tickers) then (print_endline "Invalid order"; s) else
             let dir, order = submitted_order in 
             let _ = MatchingEngine.execute_regular_order s.matching_engine dir order ticker in 
             s
-          end
+        end
     end
 
 (** [repl s] is the main terminal of the system. It prints the account name,

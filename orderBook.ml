@@ -128,7 +128,7 @@ module OrderBook : OrderBook = struct
 
   let pop_best_offer ((b,s): t) : order option * t = 
     match s with 
-    | h :: t -> ((Some h), (t,s))
+    | h :: t -> ((Some h), (b,t))
     | _ -> (None, (b,s))
 
   (** Require: both buys and sells are non-empty *)
