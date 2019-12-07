@@ -1,8 +1,10 @@
 Install third party libraries:
 
-Run the following command to install safepass:
-```opam install safepass```
-```opam install cohttp```
+
+Run the following commands to install safepass and yojson:
+```opam install safepass```  
+```opam install yojson```
+
 
 In order to run the code, enter the following command:
 

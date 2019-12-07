@@ -1,11 +1,12 @@
 open Account
+open Yojson.Basic.Util
 
 module type AccountManager = sig 
   type t
   val create : unit -> t
   val register : t -> string -> string -> Account.t
   val load_from_dir : string -> t
-  val write_accounts_to_dir : string -> t -> unit
+  (* val write_accounts_to_dir : string -> t -> unit *)
   val set_account_balance : t -> string -> float -> unit
   val inc_account_balance : t -> string -> float -> unit
   val dec_account_balance : t -> string -> float -> unit
@@ -67,43 +68,36 @@ module AccountManager : AccountManager = struct
       let _ = D.add m username (account, (hash_pw password)) in 
       account
 
-  let rec get_orders_from_line ic acct =
-    let order_name = input_line ic in
-    if order_name = "enduser" then  ()
-    else  
-      let position = input_line ic in
-      if position = "enduser" then  () 
-      else
-        Account.set_position acct order_name (int_of_string position);
-      get_orders_from_line ic acct;
+
+  let rec populate_orders orders acct =
+    match orders with 
+    | [] -> ()
+    | h :: t -> 
+      let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+      let amt = h |> to_assoc |> List.assoc "amount" |> to_int in 
+      Account.set_position acct ticker amt;
+      populate_orders t acct;
       ()
 
-  let rec populate_manager am ic = 
-    try 
-      let username = input_line ic in
-      let hashed_pass = input_line ic in
-      let balance = input_line ic in
-      let account = Account.create username (float_of_string balance) in 
+  let rec populate_manager am users = 
+    match users with 
+    | [] -> ()
+    | h :: t -> 
+      let username = h |> to_assoc |> List.assoc "username" |> to_string in
+      let hashed_pass = h |> to_assoc |> List.assoc "hashed_pass" |> to_string in
+      let balance = h |> to_assoc |> List.assoc "balance" |> to_float in
+      let account = Account.create username balance in 
       let _ = D.add am username (account, (Bcrypt.hash_of_string hashed_pass)) in 
-      get_orders_from_line ic account;
-      populate_manager am ic;
-    with e ->
-      if e = End_of_file then ()
-      else raise e
-
-  (** Searches for file 'accounts.csv' and returns input_channel associated 
-      with that file *)
-  let rec get_input_channel handle dirname = 
-    let filename = Unix.readdir handle in
-    match filename with 
-    | "accounts.csv" -> 
-      open_in (dirname ^ Filename.dir_sep ^ filename)
-    | s -> get_input_channel handle dirname
+      let list_of_orders = (h |> to_assoc |> List.assoc "orders" |> to_list) in
+      populate_orders list_of_orders account;
+      populate_manager am t;
+      ()
 
   let load_from_dir dirname = 
-    let ic = get_input_channel (Unix.opendir dirname) dirname in
+    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let users = json |> to_assoc |> List.assoc "users" |> to_list in 
     let am = create () in
-    populate_manager am ic;
+    populate_manager am users;
     am
 
   let rec get_output_channel handle dirname = 
@@ -123,20 +117,44 @@ module AccountManager : AccountManager = struct
       Printf.fprintf oc "%s\n%d\n" name pos;
       write_positions oc t
 
+  let update key f json =
+    let rec update_json_obj = function
+      | [] ->
+        begin match f None with
+          | None -> []
+          | Some v -> [(key, v)]
+        end
+      | ((k, v) as m) :: tl ->
+        if k = key then
+          match f (Some v) with
+          | None -> update_json_obj tl
+          | Some v' ->
+            if v' == v then m :: tl
+            else (k, v') :: tl
+        else m :: (update_json_obj tl) in 
+    match json with
+    | `Assoc obj -> `Assoc (update_json_obj obj)
+    | _ -> json
+
+
+  let add k v = update k (fun _ -> Some v)
+
   let rec write_accounts_to_dir dirname am = 
+    let json = `Assoc [("users"), `Assoc []] in
     let full_am_list = to_list am in
     let oc = get_output_channel (Unix.opendir dirname) dirname in
     let rec populate_file am_list = 
       match am_list with
-      | [] -> close_out oc;
+      | [] -> ()
       | (acct, pass) :: t -> 
         let username = Account.username acct in 
         let hashed_password = Bcrypt.string_of_hash pass in
         let balance = Account.balance acct in
-        Printf.fprintf oc "%s\n%s\n%s\n" username hashed_password (string_of_float balance);
-        write_positions oc (Account.positions acct);
-        Printf.fprintf oc "enduser\n";
-        populate_file t
+        let positions = Account.positions acct in 
+        (* Printf.fprintf oc "%s\n%s\n%s\n" username hashed_password (string_of_float balance);
+           write_positions oc (Account.positions acct);
+           Printf.fprintf oc "enduser\n";
+           populate_file t *)
     in populate_file full_am_list
 
 

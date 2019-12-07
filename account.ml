@@ -49,10 +49,6 @@ module Account : Account = struct
 
   let username a = a.username
 
-  let position (a: t) (t: string) = 
-    try D.find a.positions t
-    with Not_found -> 0
-
   let balance (a: t) : float = 
     let f = a.balance in 
     !f

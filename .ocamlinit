@@ -2,7 +2,9 @@
 #require "safepass";;
 #require "cohttp-lwt";;
 #require "cohttp-lwt-unix";;
+#require "yojson";;
 #load "safepass.cma";;
+#load "yojson";;
 #load "account.cmo";;
 #load "accountManager.cmo";;
 #load "orderBook.cmo";;

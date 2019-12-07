@@ -7,3 +7,4 @@ PKG cohttp-lwt-unix
 PKG unix
 PKG ocamlbuild
 PKG bisect_ppx-ocamlbuild
+PKG yojson
