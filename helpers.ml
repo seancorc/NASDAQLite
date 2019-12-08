@@ -135,6 +135,13 @@ let rec repl (s: state) : unit =
       end in 
   repl st
 
+let rec create_default_tickers dt =
+  match dt with 
+  | [] -> []
+  | h :: t -> `Assoc[("ticker", `String h);("buys",`List[]);("sells",`List[])] :: (create_default_tickers t)
+
+
+
 let inital_state () =
   try 
     let engine_json = Dao.get_engine_data () in
@@ -149,7 +156,8 @@ let inital_state () =
     let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
     let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ engine_file_name) in
     let starting_accounts_json = `Assoc["users", `List []] in 
-    let starting_engine_json = `Assoc["tickers", `List []] in 
+    let default_tickers = create_default_tickers ["GOOG"; "MSFT"; "AAPL"; "ROKU"; "AMZN"] in
+    let starting_engine_json = `Assoc["tickers", `List default_tickers] in 
     Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ accounts_file_name) 
       starting_accounts_json;
     Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ engine_file_name) 
