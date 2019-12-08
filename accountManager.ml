@@ -100,36 +100,6 @@ module AccountManager : AccountManager = struct
     populate_manager am users;
     am
 
-  (* let update key f (json: Yojson.Basic.t) =
-     let rec update_json = function
-      | [] ->
-        begin match f None with
-          | None -> []
-          | Some v -> [(key, v)]
-        end
-      | ((k, v) as m) :: t ->
-        if k = key then
-          match f (Some v) with
-          | None -> update_json t
-          | Some v' ->
-            if v' == v then m :: t
-            else (k, v') :: t
-        else m :: (update_json t) in 
-     match json with
-     | `Assoc obj -> `Assoc (update_json obj)
-     | _ -> json
-
-     let add k v = update k (fun _ -> Some v) *)
-
-  let update_json k nv j = 
-    let as_obj = Yojson.Basic.Util.to_assoc j in
-    let g = List.map begin function
-        | (k', _) when k' = k -> (k', nv)
-        | otherwise -> otherwise
-      end
-        as_obj
-    in g
-
 
   let write_to_dir dirname = 
     let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in

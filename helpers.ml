@@ -101,8 +101,6 @@ let read_input s user input am me =
   | "logout" -> 
     {s with current_account = None}
   | "quit" ->
-    AccountManager.write_accounts_to_dir "data" am;
-    MatchingEngine.write_to_dir "data" me;
     Stdlib.exit 0;
   | a -> 
     begin 
