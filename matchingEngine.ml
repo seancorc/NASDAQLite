@@ -1,9 +1,7 @@
 open OrderBook
 open AccountManager
 open Yojson.Basic.Util
-open Lwt
-open Cohttp
-open Cohttp_lwt_unix
+open Dao
 
 module type MatchingEngine = sig 
   type t
@@ -52,13 +50,7 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    let body =
-      Client.get (Uri.of_string "http://localhost:8000/accounts/") >>= fun (resp, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
-      Yojson.Basic.from_string body in
-    let am =
-      let json = Lwt_main.run body in
-      AccountManager.load_from_json json in
+    let am = Dao.get_account_data () in
     {
       orderbooks = obs;
       account_manager = am;

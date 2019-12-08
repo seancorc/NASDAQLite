@@ -139,11 +139,12 @@ let inital_state () =
     let am = MatchingEngine.get_account_manager me in
     {current_account = None ; account_manager = am; matching_engine = me}
   with e ->
-    let dirname = "data" in
-    let accounts_file_name = "accounts.csv" in
-    let orders_file_name = "orders.csv" in
-    Unix.mkdir dirname 0o775;
-    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
-    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ orders_file_name) in
-    {current_account = None ; account_manager = AccountManager.create (); 
-     matching_engine = MatchingEngine.create ()}
+    (* let dirname = "data" in
+       let accounts_file_name = "accounts.csv" in
+       let orders_file_name = "orders.csv" in
+       Unix.mkdir dirname 0o775;
+       let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
+       let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ orders_file_name) in
+       {current_account = None ; account_manager = AccountManager.create (); 
+       matching_engine = MatchingEngine.create ()} *)
+    raise e

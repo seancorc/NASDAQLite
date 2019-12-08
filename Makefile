@@ -1,13 +1,12 @@
 # state accountManager
 
-MODULES=account orderBook matchingEngine accountManager accountManager
+MODULES=account orderBook matchingEngine accountManager accountManager dao
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)
 TEST=test.byte
 MAIN=main.byte
 SERVER=exchangeServer.byte
-CLIENT=tradeClient.byte
 OCAMLBUILD=ocamlbuild -use-ocamlfind -plugin-tag 'package(bisect_ppx-ocamlbuild)'
 PKGS=unix,oUnit,str,qcheck,cohttp,cohttp-lwt-unix,thread
 
@@ -27,9 +26,6 @@ start:
 
 server:
 	$(OCAMLBUILD) $(SERVER)
-
-client:
-	$(OCAMLBUILD) $(CLIENT)
 
 test:
 	BISECT_COVERAGE=YES $(OCAMLBUILD) -tag 'debug' $(TEST) && ./$(TEST) -runner sequential
