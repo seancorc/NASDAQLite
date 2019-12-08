@@ -6,7 +6,7 @@ module type AccountManager = sig
   val create : unit -> t
   val register : t -> string -> string -> Account.t
   val load_from_dir : string -> t
-  (* val write_accounts_to_dir : string -> t -> unit *)
+  val write_to_dir : string -> unit
   val set_account_balance : t -> string -> float -> unit
   val inc_account_balance : t -> string -> float -> unit
   val dec_account_balance : t -> string -> float -> unit
@@ -100,63 +100,48 @@ module AccountManager : AccountManager = struct
     populate_manager am users;
     am
 
-  let rec get_output_channel handle dirname = 
-    let filename = Unix.readdir handle in
-    match filename with 
-    | "accounts.csv" -> 
-      open_out (dirname ^ Filename.dir_sep ^ filename)
-    | s -> get_output_channel handle dirname
-
-  let to_list (m: t) : (Account.t * Bcrypt.hash) list = 
-    D.fold (fun k v l -> v :: l) m [] 
-
-  let rec write_positions oc pss = 
-    match pss with 
-    | [] -> ()
-    | (name, pos) :: t ->
-      Printf.fprintf oc "%s\n%d\n" name pos;
-      write_positions oc t
-
-  let update key f json =
-    let rec update_json_obj = function
+  (* let update key f (json: Yojson.Basic.t) =
+     let rec update_json = function
       | [] ->
         begin match f None with
           | None -> []
           | Some v -> [(key, v)]
         end
-      | ((k, v) as m) :: tl ->
+      | ((k, v) as m) :: t ->
         if k = key then
           match f (Some v) with
-          | None -> update_json_obj tl
+          | None -> update_json t
           | Some v' ->
-            if v' == v then m :: tl
-            else (k, v') :: tl
-        else m :: (update_json_obj tl) in 
-    match json with
-    | `Assoc obj -> `Assoc (update_json_obj obj)
-    | _ -> json
+            if v' == v then m :: t
+            else (k, v') :: t
+        else m :: (update_json t) in 
+     match json with
+     | `Assoc obj -> `Assoc (update_json obj)
+     | _ -> json
+
+     let add k v = update k (fun _ -> Some v) *)
+
+  let update_json k nv j = 
+    let as_obj = Yojson.Basic.Util.to_assoc j in
+    let g = List.map begin function
+        | (k', _) when k' = k -> (k', nv)
+        | otherwise -> otherwise
+      end
+        as_obj
+    in g
 
 
-  let add k v = update k (fun _ -> Some v)
-
-  let rec write_accounts_to_dir dirname am = 
-    let json = `Assoc [("users"), `Assoc []] in
-    let full_am_list = to_list am in
-    let oc = get_output_channel (Unix.opendir dirname) dirname in
-    let rec populate_file am_list = 
-      match am_list with
-      | [] -> ()
-      | (acct, pass) :: t -> 
-        let username = Account.username acct in 
-        let hashed_password = Bcrypt.string_of_hash pass in
-        let balance = Account.balance acct in
-        let positions = Account.positions acct in 
-        (* Printf.fprintf oc "%s\n%s\n%s\n" username hashed_password (string_of_float balance);
-           write_positions oc (Account.positions acct);
-           Printf.fprintf oc "enduser\n";
-           populate_file t *)
-    in populate_file full_am_list
-
+  let write_to_dir dirname = 
+    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let users = json |> to_assoc |> List.assoc "users" |> to_list in
+    let (orders: Yojson.Basic.t) = `List [] in
+    let (new_user : Yojson.Basic.t) = `Assoc [("username", `String "aaron");
+                                              ("hashed_pass", `String "g2Y27xANW8NbPKNyxf8GPOVH1XOb43F9MWVVJlnfpjTePHgWx1Ls6");
+                                              ("balance", `String "69.4");
+                                              ("orders", orders)]  in
+    let new_users = `Assoc["users", `List (new_user :: users)] in
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") new_users;
+    ()
 
   let set_account_balance (m: t) (username: string) (a: float) = 
     let (account, _) = D.find m username in 

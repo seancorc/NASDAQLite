@@ -9,7 +9,6 @@ module type MatchingEngine = sig
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
   val load_from_dir : string -> t
-  val write_to_dir : string -> t -> unit
   val get_account_manager : t -> AccountManager.AccountManager.t
 end
 

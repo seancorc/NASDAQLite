@@ -1,5 +1,6 @@
 open OrderBook
 open AccountManager
+open Yojson.Basic.Util
 
 module type MatchingEngine = sig 
   type t
@@ -10,7 +11,6 @@ module type MatchingEngine = sig
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
   val load_from_dir : string -> t
-  val write_to_dir : string -> t -> unit
   val get_account_manager : t -> AccountManager.t
 end
 
@@ -81,93 +81,37 @@ module MatchingEngine : MatchingEngine = struct
       D.replace obs ticker ob'
     else raise UnboundTicker
 
-  let populate_orders_for_direction me ticker direction ic =
-    let line = input_line ic in
-    if line = "endticker" || line = "" then () else 
-      let lst = String.split_on_char ',' line in
-      let rec add_orders lst =
-        match lst with 
-        | [] -> ()
-        | u :: a :: p :: t :: r -> 
-          let amount = int_of_string a in
-          let price = float_of_string p in
-          let time = float_of_string t in
-          let order = (u,amount,price,time) in
-          receive_order me direction order ticker;
-          add_orders r
-        | _ -> raise (Invalid_argument "Bad File") 
-      in
-      add_orders lst
+  let rec populate_orders_for_direction me orders ticker direction =
+    match orders with 
+    | [] -> ()
+    | h :: t -> 
+      let username = h |> to_assoc |> List.assoc ("username") |> to_string in 
+      let amt = h |> to_assoc |> List.assoc ("amount") |> to_int in 
+      let price = h |> to_assoc |> List.assoc ("price") |> to_float in 
+      let time = h |> to_assoc |> List.assoc ("time") |> to_float in
+      let order = (username,amt,price,time) in
+      receive_order me direction order ticker;
+      populate_orders_for_direction me t ticker direction;
+      ()
 
-  let rec populate_ticker_for_direction me ic ticker direction = 
-    populate_orders_for_direction me ticker direction ic; 
-    ()
-
-  let rec populate_engine me ic = 
-    try 
-      let ticker_or_end = input_line ic in 
-      let ticker = if ticker_or_end = "endticker" then (input_line ic) 
-        else ticker_or_end in
-      let direction = if (input_line ic) = "buy" then Buy else Sell in
-      populate_ticker_for_direction me ic ticker direction;
-      let next_direction = if (input_line ic) = "buy" then Buy else Sell in
-      populate_ticker_for_direction me ic ticker next_direction;
-      populate_engine me ic;
-    with e ->
-      if e = End_of_file then ()
-      else raise e
-
-  (** Searches for file 'orders.csv' and returns input_channel associated 
-      with that file *)
-  let rec get_input_channel handle dirname = 
-    let filename = Unix.readdir handle in
-    match filename with 
-    | "orders.csv" -> 
-      open_in (dirname ^ Filename.dir_sep ^ filename)
-    | s -> get_input_channel handle dirname
+  let rec populate_engine me tickers = 
+    match tickers with 
+    | [] -> ()
+    | h :: t -> 
+      let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+      let buys = h |> to_assoc |> List.assoc "buys" |> to_list in
+      populate_orders_for_direction me buys ticker Buy;
+      let sells = h |> to_assoc |> List.assoc "sells" |> to_list in
+      populate_orders_for_direction me sells ticker Sell;
+      populate_engine me t;
+      ()
 
   let load_from_dir dirname = 
-    let ic = get_input_channel (Unix.opendir dirname) dirname in
+    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "engine.json") in
+    let tickers = json |> to_assoc |> List.assoc "tickers" |> to_list in 
     let me = create () in
-    populate_engine me ic;
+    populate_engine me tickers;
     me
-
-  let rec get_output_channel handle dirname = 
-    let filename = Unix.readdir handle in
-    match filename with 
-    | "orders.csv" -> 
-      open_out (dirname ^ Filename.dir_sep ^ filename)
-    | s -> get_output_channel handle dirname
-
-  let to_list (m: OrderBook.t D.t) = 
-    D.fold (fun k v l -> (k,v) :: l) m [] 
-
-  let rec write_orders oc buys = 
-    match buys with 
-    | [] -> ()
-    | (user,amt,price,time) :: t ->
-      let trailing = if List.length t = 0 then "" else "," in
-      Printf.fprintf oc "%s,%d,%f,%f%s" user amt price time trailing;
-      write_orders oc t
-
-  let write_to_dir dirname me = 
-    let oc = get_output_channel (Unix.opendir dirname) dirname in
-    let orderbooks = (to_list me.orderbooks) in
-    let rec write_file obs = 
-      match obs with 
-      | [] -> close_out oc;
-      | (ticker, ob) :: t ->
-        Printf.fprintf oc "%s\n" ticker;
-        Printf.fprintf oc "buy\n";
-        let buys = OrderBook.buys ob in
-        write_orders oc buys;
-        Printf.fprintf oc "\nsell\n";
-        let sells = OrderBook.sells ob in
-        write_orders oc sells;
-        Printf.fprintf oc "\nendticker\n";
-        write_file t;
-    in write_file orderbooks;
-    ()
 
   let rec repeat_parse (ob: OrderBook.t) (acc: transaction list) 
     : (transaction list) * OrderBook.t = 
