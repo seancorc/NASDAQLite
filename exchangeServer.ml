@@ -5,15 +5,30 @@ open Cohttp_lwt_unix
 open Helpers
 open Yojson.Basic.Util
 
+let dirname = "data"
+let successful_response = "{\"success\": \"true\"}"
+let invalid_request_body_error = "{\"error\": \"Invalid request body\"}"
 
-let get_accounts (body_str: string) : string =
+let get_accounts _ =
   match Yojson.Basic.from_file 
           ("data" ^ Filename.dir_sep ^ "accounts.json") with 
   | v -> Yojson.Basic.pretty_to_string v
   | exception e -> "Error Parsing File"
 
-let error_response mesg _ = mesg (* Needs to take extra parameter 
-                                    to account for body*)
+let add_account body =
+  match Yojson.Basic.from_string body with 
+  | new_user ->
+    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let users = json |> to_assoc |> List.assoc "users" |> to_list in
+    let new_users = `Assoc["users", `List (new_user :: users)] in
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") new_users;
+    successful_response
+  | exception e -> 
+    invalid_request_body_error
+
+let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" (* Needs to take extra 
+                                                             parameter to account 
+                                                             for body*)
 
 let _ = Cohttp_lwt_unix__.Debug.activate_debug () 
 let base_uri = "//localhost:8000"
@@ -22,6 +37,7 @@ let appropriate_method uri meth =
   if uri = (base_uri ^ "/accounts/") then 
     begin match meth with 
       | "GET" -> get_accounts
+      | "POST" -> add_account
       | _ -> error_response "Method Not Supported"
     end
   else error_response "404 Route Not Found"
