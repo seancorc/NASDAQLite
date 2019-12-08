@@ -6,7 +6,7 @@ open Helpers
 open Yojson.Basic.Util
 
 let dirname = "data"
-let successful_response = "{\"success\": \"true\"}"
+let successful_response = "{\"success\": true}"
 let invalid_request_body_error = "{\"error\": \"Invalid request body\"}"
 
 let get_accounts _ =
@@ -26,7 +26,8 @@ let add_account body =
   | exception e -> 
     invalid_request_body_error
 
-let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" (* Needs to take extra 
+let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" (* error_response 
+                                                             Needs to take extra 
                                                              parameter to account 
                                                              for body*)
 

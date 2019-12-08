@@ -15,8 +15,7 @@ module type AccountManager = sig
   type t
   val create : unit -> t
   val register : t -> string -> string -> Account.t
-  val load_from_dir : string -> t
-  val write_to_dir : string -> unit
+  val load_from_json : Yojson.Basic.t -> t
   val set_account_balance : t -> string -> float -> unit
   val inc_account_balance : t -> string -> float -> unit
   val dec_account_balance : t -> string -> float -> unit

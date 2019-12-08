@@ -1,6 +1,9 @@
 open OrderBook
 open AccountManager
 open Yojson.Basic.Util
+open Lwt
+open Cohttp
+open Cohttp_lwt_unix
 
 module type MatchingEngine = sig 
   type t
@@ -10,7 +13,7 @@ module type MatchingEngine = sig
   val execute_market_order : t -> order_direction -> string -> int -> string -> unit
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
-  val load_from_dir : string -> t
+  val load_from_json : Yojson.Basic.t -> t
   val get_account_manager : t -> AccountManager.t
 end
 
@@ -49,7 +52,13 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    let am = AccountManager.load_from_dir "data" in 
+    let body =
+      Client.get (Uri.of_string "http://localhost:8000/accounts/") >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body in
+    let am =
+      let json = Lwt_main.run body in
+      AccountManager.load_from_json json in
     {
       orderbooks = obs;
       account_manager = am;
@@ -106,8 +115,7 @@ module MatchingEngine : MatchingEngine = struct
       populate_engine me t;
       ()
 
-  let load_from_dir dirname = 
-    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "engine.json") in
+  let load_from_json json = 
     let tickers = json |> to_assoc |> List.assoc "tickers" |> to_list in 
     let me = create () in
     populate_engine me tickers;

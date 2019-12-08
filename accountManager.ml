@@ -5,8 +5,7 @@ module type AccountManager = sig
   type t
   val create : unit -> t
   val register : t -> string -> string -> Account.t
-  val load_from_dir : string -> t
-  val write_to_dir : string -> unit
+  val load_from_json : Yojson.Basic.t -> t
   val set_account_balance : t -> string -> float -> unit
   val inc_account_balance : t -> string -> float -> unit
   val dec_account_balance : t -> string -> float -> unit
@@ -93,25 +92,11 @@ module AccountManager : AccountManager = struct
       populate_manager am t;
       ()
 
-  let load_from_dir dirname = 
-    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+  let load_from_json json = 
     let users = json |> to_assoc |> List.assoc "users" |> to_list in 
     let am = create () in
     populate_manager am users;
     am
-
-
-  let write_to_dir dirname = 
-    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
-    let users = json |> to_assoc |> List.assoc "users" |> to_list in
-    let (orders: Yojson.Basic.t) = `List [] in
-    let (new_user : Yojson.Basic.t) = `Assoc [("username", `String "aaron");
-                                              ("hashed_pass", `String "g2Y27xANW8NbPKNyxf8GPOVH1XOb43F9MWVVJlnfpjTePHgWx1Ls6");
-                                              ("balance", `String "69.4");
-                                              ("orders", orders)]  in
-    let new_users = `Assoc["users", `List (new_user :: users)] in
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") new_users;
-    ()
 
   let set_account_balance (m: t) (username: string) (a: float) = 
     let (account, _) = D.find m username in 

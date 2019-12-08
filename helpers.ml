@@ -135,7 +135,7 @@ let rec repl (s: state) : unit =
 
 let inital_state () =
   try 
-    let me = MatchingEngine.load_from_dir "data" in
+    let me = MatchingEngine.create () in
     let am = MatchingEngine.get_account_manager me in
     {current_account = None ; account_manager = am; matching_engine = me}
   with e ->
