@@ -2,6 +2,7 @@ open AccountManager
 open Account
 open OrderBook
 open MatchingEngine
+open Dao
 
 
 type state = {current_account: Account.t option; account_manager : AccountManager.t; matching_engine: MatchingEngine.t}
@@ -61,6 +62,7 @@ let register (s : state) : state =
   let username = String.trim(read_line ()) in 
   print_string "Password: ";
   let password = (read_line ()) in 
+  let _ = Dao.signup_user username password in
   let new_account = AccountManager.register (s.account_manager) username 
       password in 
   let s = {s with current_account = (Some new_account)} in 
@@ -135,16 +137,23 @@ let rec repl (s: state) : unit =
 
 let inital_state () =
   try 
-    let me = MatchingEngine.create () in
-    let am = MatchingEngine.get_account_manager me in
+    let engine_json = Dao.get_engine_data () in
+    let me = MatchingEngine.load_from_json engine_json in  
+    let am = MatchingEngine.get_account_manager me in 
     {current_account = None ; account_manager = am; matching_engine = me}
   with e ->
-    (* let dirname = "data" in
-       let accounts_file_name = "accounts.csv" in
-       let orders_file_name = "orders.csv" in
-       Unix.mkdir dirname 0o775;
-       let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
-       let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ orders_file_name) in
-       {current_account = None ; account_manager = AccountManager.create (); 
-       matching_engine = MatchingEngine.create ()} *)
-    raise e
+    let dirname = "data" in
+    let accounts_file_name = "accounts.json" in
+    let engine_file_name = "engine.json" in
+    Unix.mkdir dirname 0o775;
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ engine_file_name) in
+    let starting_accounts_json = `Assoc["users", `List []] in 
+    let starting_engine_json = `Assoc["tickers", `List []] in 
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ accounts_file_name) 
+      starting_accounts_json;
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ engine_file_name) 
+      starting_engine_json;
+    let me = MatchingEngine.create () in 
+    let am = MatchingEngine.get_account_manager me in 
+    {current_account = None ; account_manager = am; matching_engine = me}

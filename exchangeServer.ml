@@ -26,6 +26,12 @@ let add_account body =
   | exception e -> 
     invalid_request_body_error
 
+let get_engine _ = 
+  match Yojson.Basic.from_file 
+          ("data" ^ Filename.dir_sep ^ "engine.json") with 
+  | v -> Yojson.Basic.pretty_to_string v
+  | exception e -> "Error Parsing File"
+
 let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" (* error_response 
                                                              Needs to take extra 
                                                              parameter to account 
@@ -39,6 +45,11 @@ let appropriate_method uri meth =
     begin match meth with 
       | "GET" -> get_accounts
       | "POST" -> add_account
+      | _ -> error_response "Method Not Supported"
+    end
+  else if uri = (base_uri ^ "/engine/") then
+    begin match meth with 
+      | "GET" -> get_engine
       | _ -> error_response "Method Not Supported"
     end
   else error_response "404 Route Not Found"

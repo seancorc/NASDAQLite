@@ -50,11 +50,19 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    let am = Dao.get_account_data () in
-    {
-      orderbooks = obs;
-      account_manager = am;
-    }
+    try 
+      let json = Dao.get_account_data () in
+      let am = AccountManager.load_from_json json in 
+      {
+        orderbooks = obs;
+        account_manager = am;
+      }
+    with _ ->
+      let am = AccountManager.create () in 
+      {
+        orderbooks = obs;
+        account_manager = am;
+      }
 
   let get_account_manager (me: t) = me.account_manager
 
@@ -73,11 +81,11 @@ module MatchingEngine : MatchingEngine = struct
     else raise UnboundTicker
 
   let receive_order (me: t) (direction: order_direction) (order: order) 
-      (ticker: string) : unit = 
+      (ticker: string) : unit =  
     if member me ticker then 
       let obs = me.orderbooks in 
       let ob = D.find obs ticker in 
-      let submit_order = (direction, order) in 
+      let submit_order = (direction, order) in
       let ob' = OrderBook.insert_order ob submit_order in 
       D.replace obs ticker ob'
     else raise UnboundTicker
