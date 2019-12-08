@@ -2,6 +2,7 @@ Install third party libraries:
 
 Run the following command to install safepass:
 ```opam install safepass```
+```opam install cohttp```
 
 In order to run the code, enter the following command:
 

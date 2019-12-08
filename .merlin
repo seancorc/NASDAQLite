@@ -2,6 +2,8 @@ B _build
 PKG oUnit
 PKG str
 PKG safepass
+PKG cohttp
+PKG cohttp-lwt-unix
 PKG unix
 PKG ocamlbuild
 PKG bisect_ppx-ocamlbuild

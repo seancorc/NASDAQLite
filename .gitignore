@@ -1,6 +1,9 @@
 # Build Files
 _build/*
 
+# Ignore local storage files
+data/*
+
 # Ignore testing related files
 bisect*.out
 test.byte
