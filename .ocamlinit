@@ -3,6 +3,7 @@
 #require "cohttp-lwt";;
 #require "cohttp-lwt-unix";;
 #require "yojson";;
+#require "str";;
 #load "safepass.cma";;
 #load "account.cmo";;
 #load "accountManager.cmo";;
