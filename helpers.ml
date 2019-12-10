@@ -103,6 +103,9 @@ let read_input s user input am me =
   | "logout" -> 
     {s with current_account = None}
   | "quit" ->
+    let am_json_string = AccountManager.to_json_string s.account_manager in 
+    Dao.write_account_manager_data am_json_string;
+    (** TODO, do same thing with matching engine data*)
     Stdlib.exit 0;
   | a -> 
     begin 

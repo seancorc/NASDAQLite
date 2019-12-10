@@ -17,6 +17,14 @@ let get_accounts _ =
   | v -> Yojson.Basic.pretty_to_string v
   | exception e -> "Error Parsing File"
 
+let write_accounts body = 
+  match Yojson.Basic.from_string body with 
+  | am -> 
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") am;
+    successful_response
+  | exception e ->
+    invalid_request_body_error
+
 let add_account body =
   match Yojson.Basic.from_string body with 
   | new_user ->
@@ -92,6 +100,11 @@ let appropriate_method uri meth =
   if uri = (base_uri ^ "/accounts/") then 
     begin match meth with 
       | "GET" -> get_accounts
+      | "POST" -> write_accounts
+      | _ -> error_response "Method Not Supported"
+    end
+  else if uri = (base_uri ^ "/account/") then 
+    begin match meth with 
       | "POST" -> add_account
       | _ -> error_response "Method Not Supported"
     end

@@ -6,6 +6,7 @@ open Bcrypt
 
 module type Dao = sig 
   val get_account_data : unit -> Yojson.Basic.t
+  val write_account_manager_data : string -> unit
   val signup_user : string -> string -> unit
   val get_engine_data : unit -> Yojson.Basic.t
   val add_order : string -> string -> string -> string -> string -> unit
@@ -25,6 +26,19 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     json
 
+  let write_account_manager_data am_json_string = 
+    let post_body = Cohttp_lwt.Body.of_string am_json_string in
+    let body =
+      Client.post ~body:post_body 
+        (Uri.of_string "http://localhost:8000/accounts/") >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    match json |> to_assoc |> List.assoc "success" |> to_bool with
+    | true -> ()
+    | _ -> raise Server_Error
+
   let signup_user username pass = 
     let hashed_pass = Bcrypt.string_of_hash (Bcrypt.hash pass) in
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
@@ -33,7 +47,7 @@ module Dao : Dao = struct
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.post ~body:post_body 
-        (Uri.of_string "http://localhost:8000/accounts/") >>= fun (resp, body) ->
+        (Uri.of_string "http://localhost:8000/account/") >>= fun (resp, body) ->
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         

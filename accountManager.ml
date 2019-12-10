@@ -76,12 +76,8 @@ module AccountManager : AccountManager = struct
       | [] -> base_string
       | (acct,hash) :: t -> 
         let acct_string = (Account.to_json_string acct hash) in
-        if List.length t >= 1 then
-          create (base_string ^ acct_string ^ ",") t
-        else create (base_string ^ acct_string) t in 
-    print_string ((create "{
-      \"users\": [" accounts) ^ "]
-      }");
+        create (base_string ^ acct_string ^ (if (List.length t) >= 1 then 
+                                               "," else "")) t in
     create "{\"users\": [" accounts ^ "]}"
 
 
