@@ -42,6 +42,14 @@ let get_engine _ =
   | v -> Yojson.Basic.pretty_to_string v
   | exception e -> "Error Parsing File"
 
+let write_engine body = 
+  match Yojson.Basic.from_string body with 
+  | me -> 
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") me;
+    successful_response
+  | exception e ->
+    invalid_request_body_error
+
 let get_specific_ticker ticker tickers = 
   let rec find_ticker_and_accumulate_others acc = 
     match tickers with 
@@ -111,6 +119,11 @@ let appropriate_method uri meth =
   else if uri = (base_uri ^ "/engine/") then
     begin match meth with 
       | "GET" -> get_engine
+      | "POST" -> write_engine
+      | _ -> error_response "Method Not Supported"
+    end
+  else if uri = (base_uri ^ "/orders/") then
+    begin match meth with 
       | "POST" -> add_order
       | _ -> error_response "Method Not Supported"
     end

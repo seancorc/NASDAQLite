@@ -5,6 +5,7 @@ open Dao
 
 module type MatchingEngine = sig 
   type t
+  val orderbooks_to_json_string : t -> string
   val create : unit -> t
   val member : t -> string -> bool
   val execute_regular_order : t -> order_direction -> order -> string -> unit
@@ -65,6 +66,19 @@ module MatchingEngine : MatchingEngine = struct
       }
 
   let get_account_manager (me: t) = me.account_manager
+
+  let orderbooks_to_json_string (me : t) = 
+    let obs = D.fold (fun ticker ob acc -> 
+        (ticker, ob) :: acc) me.orderbooks [] in  
+    let rec create base_string order_books = 
+      match order_books with 
+      | [] -> base_string
+      | (ticker,ob) :: t -> 
+        let ob_string = (OrderBook.to_json_string ob) in
+        let ticker_string = "{\n\"ticker\": \"" ^ ticker ^ "\",\n" in 
+        create (base_string ^ ticker_string ^ ob_string ^ "}" ^
+                (if (List.length t) >= 1 then ",\n" else "\n")) t in
+    (create "{\"tickers\": [" obs) ^ "]}"
 
   let member (me: t) (ticker: string) : bool = 
     let obs = me.orderbooks in D.mem obs ticker

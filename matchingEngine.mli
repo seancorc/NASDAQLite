@@ -2,6 +2,7 @@ open OrderBook
 
 module type MatchingEngine = sig 
   type t
+  val orderbooks_to_json_string : t -> string
   val create : unit -> t
   val member : t -> string -> bool
   val execute_regular_order : t -> order_direction -> order -> string -> unit

@@ -9,6 +9,7 @@ module type Dao = sig
   val write_account_manager_data : string -> unit
   val signup_user : string -> string -> unit
   val get_engine_data : unit -> Yojson.Basic.t
+  val write_engine_data : string -> unit
   val add_order : string -> string -> string -> string -> string -> unit
 end
 
@@ -65,6 +66,19 @@ module Dao : Dao = struct
     in         
     let json = Lwt_main.run body in
     json
+
+  let write_engine_data me_json_string = 
+    let post_body = Cohttp_lwt.Body.of_string me_json_string in
+    let body =
+      Client.post ~body:post_body 
+        (Uri.of_string "http://localhost:8000/engine/") >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    match json |> to_assoc |> List.assoc "success" |> to_bool with
+    | true -> ()
+    | _ -> raise Server_Error
 
   let add_order ticker direction username amt price =
     let order = "{\n\"username\":\""^ username ^"\",

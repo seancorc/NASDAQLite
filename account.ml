@@ -56,7 +56,7 @@ module Account : Account = struct
     let json_orders = create_orders_json_string orders in 
     "{
       \"username\":\"" ^ a.username ^"\",
-      \n\"hashed_pass\": \"" ^ hashed_pass ^ "\",
+      \"hashed_pass\": \"" ^ hashed_pass ^ "\",
       \"balance\": " ^ (string_of_float !(a.balance)) ^ "0,
       \"orders\": " ^ json_orders ^ "}\n"
 
