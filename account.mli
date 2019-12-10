@@ -1,5 +1,6 @@
 module type Account = sig 
   type t
+  val to_json_string : t -> string -> string
   val create_empty : string -> t
   val create : string -> float -> t
   val username : t -> string

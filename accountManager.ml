@@ -3,6 +3,7 @@ open Yojson.Basic.Util
 
 module type AccountManager = sig 
   type t
+  val to_json_string : t -> string
   val create : unit -> t
   val register : t -> string -> string -> Account.t
   val load_from_json : Yojson.Basic.t -> t
@@ -66,6 +67,22 @@ module AccountManager : AccountManager = struct
       let account = Account.create_empty username in 
       let _ = D.add m username (account, (hash_pw password)) in 
       account
+
+  let to_json_string (am : t) = 
+    let accounts = D.fold (fun _ (acct, hash) acc -> 
+        (acct,Bcrypt.string_of_hash hash) :: acc) am [] in 
+    let rec create base_string accts = 
+      match accts with 
+      | [] -> base_string
+      | (acct,hash) :: t -> 
+        let acct_string = (Account.to_json_string acct hash) in
+        if List.length t >= 1 then
+          create (base_string ^ acct_string ^ ",") t
+        else create (base_string ^ acct_string) t in 
+    print_string ((create "{
+      \"users\": [" accounts) ^ "]
+      }");
+    create "{\"users\": [" accounts ^ "]}"
 
 
   let rec populate_orders orders acct =

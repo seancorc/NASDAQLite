@@ -1,6 +1,7 @@
 
 module type Account = sig 
   type t
+  val to_json_string : t -> string -> string
   val create_empty : string -> t
   val create : string -> float -> t
   val username : t -> string
@@ -39,6 +40,26 @@ module Account : Account = struct
     balance: float ref;
     positions: int D.t;
   }
+
+  let create_orders_json_string orders =
+    let rec create base_string ords =   
+      match ords with 
+      | [] -> base_string
+      | (ticker, amt) :: t -> 
+        base_string ^ "{" ^ "\"ticker\": " ^ ticker ^ ",\n\"amount\": "
+        ^ amt ^ "}" in 
+    (create "[" orders) ^ "]"
+
+  let to_json_string a hashed_pass =
+    let orders = D.fold (fun k v acc -> 
+        ("\"" ^ k ^ "\"",(string_of_int v)) :: acc) a.positions [] in 
+    let json_orders = create_orders_json_string orders in 
+    "{
+      \"username\":\"" ^ a.username ^"\",
+      \n\"hashed_pass\": \"" ^ hashed_pass ^ "\",
+      \"balance\": " ^ (string_of_float !(a.balance)) ^ "0,
+      \"orders\": " ^ json_orders ^ "}\n"
+
   let create (usr: string) (start_balance: float) = 
     let positions = D.create 10 in 
     {username = usr; balance = ref start_balance; positions = positions}
