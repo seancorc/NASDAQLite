@@ -18,6 +18,8 @@ module type OrderBook = sig
   (** [t] is the type of order books. *)
   type t
 
+  val to_json_string : t -> string
+
   (** [empty] is the empty order book. *)
   val empty : t
 
@@ -33,7 +35,7 @@ module type OrderBook = sig
   val no_sells : t -> bool
 
   val buys : t -> order list
-  
+
   val sells : t -> order list
 
   (** [size ob] is the total number of orders in the orderbook [ob]. *)

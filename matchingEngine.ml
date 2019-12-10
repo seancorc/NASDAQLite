@@ -1,16 +1,18 @@
 open OrderBook
 open AccountManager
+open Yojson.Basic.Util
+open Dao
 
 module type MatchingEngine = sig 
   type t
+  val orderbooks_to_json_string : t -> string
   val create : unit -> t
   val member : t -> string -> bool
   val execute_regular_order : t -> order_direction -> order -> string -> unit
   val execute_market_order : t -> order_direction -> string -> int -> string -> unit
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
-  val load_from_dir : string -> t
-  val write_to_dir : string -> t -> unit
+  val load_from_json : Yojson.Basic.t -> t
   val get_account_manager : t -> AccountManager.t
 end
 
@@ -49,13 +51,34 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    let am = AccountManager.load_from_dir "data" in 
-    {
-      orderbooks = obs;
-      account_manager = am;
-    }
+    try 
+      let json = Dao.get_account_data () in
+      let am = AccountManager.load_from_json json in 
+      {
+        orderbooks = obs;
+        account_manager = am;
+      }
+    with _ ->
+      let am = AccountManager.create () in 
+      {
+        orderbooks = obs;
+        account_manager = am;
+      }
 
   let get_account_manager (me: t) = me.account_manager
+
+  let orderbooks_to_json_string (me : t) = 
+    let obs = D.fold (fun ticker ob acc -> 
+        (ticker, ob) :: acc) me.orderbooks [] in  
+    let rec create base_string order_books = 
+      match order_books with 
+      | [] -> base_string
+      | (ticker,ob) :: t -> 
+        let ob_string = (OrderBook.to_json_string ob) in
+        let ticker_string = "{\n\"ticker\": \"" ^ ticker ^ "\",\n" in 
+        create (base_string ^ ticker_string ^ ob_string ^ "}" ^
+                (if (List.length t) >= 1 then ",\n" else "\n")) t in
+    (create "{\"tickers\": [" obs) ^ "]}"
 
   let member (me: t) (ticker: string) : bool = 
     let obs = me.orderbooks in D.mem obs ticker
@@ -72,102 +95,45 @@ module MatchingEngine : MatchingEngine = struct
     else raise UnboundTicker
 
   let receive_order (me: t) (direction: order_direction) (order: order) 
-      (ticker: string) : unit = 
+      (ticker: string) : unit =  
     if member me ticker then 
       let obs = me.orderbooks in 
       let ob = D.find obs ticker in 
-      let submit_order = (direction, order) in 
+      let submit_order = (direction, order) in
       let ob' = OrderBook.insert_order ob submit_order in 
       D.replace obs ticker ob'
     else raise UnboundTicker
 
-  let populate_orders_for_direction me ticker direction ic =
-    let line = input_line ic in
-    if line = "endticker" || line = "" then () else 
-      let lst = String.split_on_char ',' line in
-      let rec add_orders lst =
-        match lst with 
-        | [] -> ()
-        | u :: a :: p :: t :: r -> 
-          let amount = int_of_string a in
-          let price = float_of_string p in
-          let time = float_of_string t in
-          let order = (u,amount,price,time) in
-          receive_order me direction order ticker;
-          add_orders r
-        | _ -> raise (Invalid_argument "Bad File") 
-      in
-      add_orders lst
-
-  let rec populate_ticker_for_direction me ic ticker direction = 
-    populate_orders_for_direction me ticker direction ic; 
-    ()
-
-  let rec populate_engine me ic = 
-    try 
-      let ticker_or_end = input_line ic in 
-      let ticker = if ticker_or_end = "endticker" then (input_line ic) 
-        else ticker_or_end in
-      let direction = if (input_line ic) = "buy" then Buy else Sell in
-      populate_ticker_for_direction me ic ticker direction;
-      let next_direction = if (input_line ic) = "buy" then Buy else Sell in
-      populate_ticker_for_direction me ic ticker next_direction;
-      populate_engine me ic;
-    with e ->
-      if e = End_of_file then ()
-      else raise e
-
-  (** Searches for file 'orders.csv' and returns input_channel associated 
-      with that file *)
-  let rec get_input_channel handle dirname = 
-    let filename = Unix.readdir handle in
-    match filename with 
-    | "orders.csv" -> 
-      open_in (dirname ^ Filename.dir_sep ^ filename)
-    | s -> get_input_channel handle dirname
-
-  let load_from_dir dirname = 
-    let ic = get_input_channel (Unix.opendir dirname) dirname in
-    let me = create () in
-    populate_engine me ic;
-    me
-
-  let rec get_output_channel handle dirname = 
-    let filename = Unix.readdir handle in
-    match filename with 
-    | "orders.csv" -> 
-      open_out (dirname ^ Filename.dir_sep ^ filename)
-    | s -> get_output_channel handle dirname
-
-  let to_list (m: OrderBook.t D.t) = 
-    D.fold (fun k v l -> (k,v) :: l) m [] 
-
-  let rec write_orders oc buys = 
-    match buys with 
+  let rec populate_orders_for_direction me orders ticker direction =
+    match orders with 
     | [] -> ()
-    | (user,amt,price,time) :: t ->
-      let trailing = if List.length t = 0 then "" else "," in
-      Printf.fprintf oc "%s,%d,%f,%f%s" user amt price time trailing;
-      write_orders oc t
+    | h :: t -> 
+      let username = h |> to_assoc |> List.assoc ("username") |> to_string in 
+      let amt = h |> to_assoc |> List.assoc ("amount") |> to_int in 
+      let price = h |> to_assoc |> List.assoc ("price") |> to_float in 
+      let time = h |> to_assoc |> List.assoc ("time") |> to_float in
+      let order = (username,amt,price,time) in
+      receive_order me direction order ticker;
+      populate_orders_for_direction me t ticker direction;
+      ()
 
-  let write_to_dir dirname me = 
-    let oc = get_output_channel (Unix.opendir dirname) dirname in
-    let orderbooks = (to_list me.orderbooks) in
-    let rec write_file obs = 
-      match obs with 
-      | [] -> close_out oc;
-      | (ticker, ob) :: t ->
-        Printf.fprintf oc "%s\n" ticker;
-        Printf.fprintf oc "buy\n";
-        let buys = OrderBook.buys ob in
-        write_orders oc buys;
-        Printf.fprintf oc "\nsell\n";
-        let sells = OrderBook.sells ob in
-        write_orders oc sells;
-        Printf.fprintf oc "\nendticker\n";
-        write_file t;
-    in write_file orderbooks;
-    ()
+  let rec populate_engine me tickers = 
+    match tickers with 
+    | [] -> ()
+    | h :: t -> 
+      let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+      let buys = h |> to_assoc |> List.assoc "buys" |> to_list in
+      populate_orders_for_direction me buys ticker Buy;
+      let sells = h |> to_assoc |> List.assoc "sells" |> to_list in
+      populate_orders_for_direction me sells ticker Sell;
+      populate_engine me t;
+      ()
+
+  let load_from_json json = 
+    let tickers = json |> to_assoc |> List.assoc "tickers" |> to_list in 
+    let me = create () in
+    populate_engine me tickers;
+    me
 
   let rec repeat_parse (ob: OrderBook.t) (acc: transaction list) 
     : (transaction list) * OrderBook.t = 

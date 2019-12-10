@@ -11,6 +11,7 @@ type transaction = float * int * string * string
 
 module type OrderBook = sig
   type t
+  val to_json_string : t -> string
   val empty : t
   val is_empty : t -> bool
   val no_buys : t -> bool
@@ -56,6 +57,26 @@ module OrderBook : OrderBook = struct
 
   let sells ((_, s) : t) = 
     s
+
+  let rec json_string_of_order_list (olist : order list) base_string = 
+    match olist with
+    | [] ->  base_string
+    | (username, amount, price, time) :: t -> 
+      let js = "{
+      \"username\":\"" ^ username ^"\",
+      \"amount\": " ^ (string_of_int amount) ^ ",
+      \"price\": " ^ (string_of_float price) ^ "0,
+      \"time\": " ^ (string_of_float time) ^ "0}" ^ 
+               (if List.length t >= 1 then ",\n" else "\n") in
+      json_string_of_order_list t (base_string ^ js)
+
+
+  let to_json_string ((b,s) : t) =
+    let buy_base_string = "\"buys\": [" in
+    let buy_json_string = (json_string_of_order_list b buy_base_string) ^ "],\n" in (*Note comma at end*)
+    let sell_base_string = "\"sells\": [" in
+    let sell_json_string = (json_string_of_order_list s sell_base_string) ^ "]\n" in
+    (buy_json_string ^ sell_json_string)
 
   let size ((b, s) : t) = 
     List.fold_left (fun acc x -> acc + 1) 0 b + 

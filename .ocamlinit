@@ -1,8 +1,12 @@
 #directory "_build";;
 #require "safepass";;
+#require "cohttp-lwt";;
+#require "cohttp-lwt-unix";;
+#require "yojson";;
 #load "safepass.cma";;
 #load "account.cmo";;
 #load "accountManager.cmo";;
+#load "dao.cmo";;
 #load "orderBook.cmo";;
 #load "matchingEngine.cmo";;
 #load "state.cmo";;

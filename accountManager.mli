@@ -13,10 +13,10 @@ exception InvalidPassword
     the creation and manipulation of accounts *)
 module type AccountManager = sig 
   type t
+  val to_json_string : t -> string
   val create : unit -> t
   val register : t -> string -> string -> Account.t
-  val load_from_dir : string -> t
-  val write_accounts_to_dir : string -> t -> unit
+  val load_from_json : Yojson.Basic.t -> t
   val set_account_balance : t -> string -> float -> unit
   val inc_account_balance : t -> string -> float -> unit
   val dec_account_balance : t -> string -> float -> unit
