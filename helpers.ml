@@ -3,6 +3,7 @@ open Account
 open OrderBook
 open MatchingEngine
 open Dao
+open Yojson.Basic.Util
 
 
 type state = {current_account: Account.t option; account_manager : AccountManager.t; matching_engine: MatchingEngine.t}
@@ -89,10 +90,19 @@ let parse_order (usr: string) (lst: string list) : (string * submitted_order) op
   with exn -> None
 
 let prompt_user_input (user: Account.t): string = 
-  print_newline (); print_endline ("Account: " ^ Account.username user); 
-  let balances = Account.positions user in 
-  let usd_balance = Account.balance user in 
-  let balances = ("USD", (int_of_float usd_balance)) :: balances in 
+  let username = Account.username user in
+  let usd_balance_json = Dao.get_account_balance username in 
+  let assoc_list = usd_balance_json |> to_assoc in 
+  let usd_balance = assoc_list |> List.assoc "data" |> to_float in 
+  let positions_json = Dao.get_account_positions username in
+  let assoc_list = positions_json |> to_assoc in
+  let json_positions = assoc_list |> List.assoc "data" |> to_list in 
+  let positions = List.fold_left (fun acc pos -> 
+      let assoc = pos |> to_assoc in
+      let ticker = assoc |> List.assoc "ticker" |> to_string in 
+      let amount = assoc |> List.assoc "amount" |> to_int in
+      (ticker,amount) :: acc) [] json_positions  in
+  let balances = ("USD", (int_of_float usd_balance)) :: positions in 
   let _ = print_balances balances in 
   print_endline "To log out of this account, type 'logout' and to save&exit type 'quit'";
   print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, order size, price (only for Buy or Sell)";

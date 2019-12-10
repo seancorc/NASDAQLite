@@ -7,6 +7,8 @@ open Bcrypt
 module type Dao = sig 
   val get_account_data : unit -> Yojson.Basic.t
   val write_account_manager_data : string -> unit
+  val get_account_balance : string -> Yojson.Basic.t
+  val get_account_positions : string -> Yojson.Basic.t
   val signup_user : string -> string -> unit
   val get_engine_data : unit -> Yojson.Basic.t
   val write_engine_data : string -> unit
@@ -26,6 +28,27 @@ module Dao : Dao = struct
     in         
     let json = Lwt_main.run body in
     json
+
+  let get_account_balance username = 
+    let body =
+      Client.get 
+        (Uri.of_string ("http://localhost:8000/account/balance/" ^ username ^ "/")) >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    json
+
+  let get_account_positions username = 
+    let body =
+      Client.get 
+        (Uri.of_string ("http://localhost:8000/account/positions/" ^ username ^ "/")) >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    json
+
 
   let write_account_manager_data am_json_string = 
     let post_body = Cohttp_lwt.Body.of_string am_json_string in

@@ -28,6 +28,24 @@ let get_account_balance username _ =
   let balance = (user |> to_assoc |> List.assoc "balance" |> to_float) in
   "{\"success\": true, \"data\":" ^ (string_of_float balance) ^ "0}"
 
+let rec create_orders_json orders acc =
+  match orders with 
+  | [] -> acc 
+  | h :: t -> 
+    let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+    let amount = h |> to_assoc |> List.assoc "amount" |> to_int in
+    let order_json = "{\"ticker\": \"" ^ ticker ^ "\",
+      \"amount\": " ^ (string_of_int amount) ^ "}" ^ if List.length t >= 1
+                     then ",\n" else "\n" in 
+    create_orders_json t (acc ^ order_json)
+
+let get_account_positions username _ =
+  let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+  let users = json |> to_assoc |> List.assoc "users" |> to_list in
+  let user = List.find (find_user username) users in
+  let orders = (user |> to_assoc |> List.assoc "orders" |> to_list) in
+  "{\"success\": true, \"data\":[" ^ (create_orders_json orders "") ^ "]}"
+
 let write_accounts body = 
   match Yojson.Basic.from_string body with 
   | am -> 
@@ -112,10 +130,15 @@ let error_response err _ = "{\"error\": \"" ^ err ^ "\"}"
 let _ = Cohttp_lwt_unix__.Debug.activate_debug () 
 let base_uri = "//localhost:8000"
 
+
+let not_implemented body = error_response "Not yet implemented" ()
+
 let appropriate_method uri meth =
-  let account_balance_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/balance\\/*" in
+  let account_balance_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/balance\\/" in
+  let account_positions_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/positions\\/" in
   if uri = (base_uri ^ "/accounts/") then 
     begin match meth with 
+      (* Get rid of this, should not allow *)
       | "GET" -> get_accounts
       | "POST" -> write_accounts
       | _ -> error_response "Method Not Supported"
@@ -123,10 +146,11 @@ let appropriate_method uri meth =
   else if uri = (base_uri ^ "/account/") then 
     begin match meth with 
       | "POST" -> add_account
+      | "DELETE" -> not_implemented
       | _ -> error_response "Method Not Supported"
     end
   else if Str.string_match account_balance_regex 
-      (base_uri ^ "/account/balance/") 0 then 
+      (uri ^ "/account/balance/") 0 then 
     let slash_index = String.rindex_from uri ((String.length uri) - 2) '/' in
     let username = String.sub uri (slash_index + 1) 
         (String.length uri - (slash_index + 2)) in
@@ -134,6 +158,18 @@ let appropriate_method uri meth =
       | "GET" -> get_account_balance username
       | _ -> error_response "Method Not Supported"
     end
+  else if Str.string_match account_positions_regex 
+      (uri ^ "/account/positions/") 0 then 
+    let slash_index = String.rindex_from uri ((String.length uri) - 2) '/' in
+    let username = String.sub uri (slash_index + 1) 
+        (String.length uri - (slash_index + 2)) in
+    begin match meth with 
+      | "GET" -> get_account_positions username
+      | _ -> error_response "Method Not Supported"
+    end
+    (* match username and ticker symbol -> return balance ie. amount
+       and another route for get all positions
+    *)
   else if uri = (base_uri ^ "/engine/") then
     begin match meth with 
       | "GET" -> get_engine
