@@ -1,0 +1,43 @@
+{
+  "users": [
+    {
+      "username": "sean",
+      "hashed_pass": "$2y$06$gFMmllnHD1AmckTnKAnw1uhGR8RFUO1TukGiV/m6zctoNBLFwumlO",
+      "balance": 485.0,
+      "orders": [
+        {
+          "ticker": "GOOG",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "username": "markk",
+      "hashed_pass": "$2y$06$wpFW0GsbJTRX.4QLLRQuBe1Vfstbzi2jrX.2u7Fqb.aQphOQkDfgC",
+      "balance": 0.0,
+      "orders": [
+        {
+          "ticker": "GOOG",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "username": "Jac",
+      "hashed_pass": "$2y$06$/9kt8RjBe7tOgOpMnDuPE.HRD3fGG5Z3YRmawVw4VYfUruLfibuE2",
+      "balance": -485.0,
+      "orders": [
+        {
+          "ticker": "GOOG",
+          "amount": -1
+        }
+      ]
+    },
+    {
+      "username": "mark",
+      "hashed_pass": "$2y$06$3x12PGzFqKqyn.wAjEzaueQPdyLgZvZ1Qq63j.7YAzjhlSEM4.NsG",
+      "balance": 0.0,
+      "orders": []
+    }
+  ]
+}

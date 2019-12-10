@@ -1,5 +1,7 @@
 open OrderBook
 
+exception UnboundTicker
+
 module type MatchingEngine = sig 
   type t
   val orderbooks_to_json_string : t -> string
