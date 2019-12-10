@@ -5,25 +5,114 @@ module type Tests = sig
 end
 
 module MatchingEngineTest (ME: MatchingEngine.MatchingEngine) = struct 
+  open OrderBook
   open MatchingEngine
+  open AccountManager
+  open Account
 
+  let me0 = ME.load_from_json (Yojson.Basic.from_file "tickers_test.json")
   let me1 = ME.load_from_json (Yojson.Basic.from_file "tickers_test.json")
   let me2 = ME.create ()
 
-  let b1 = ("AAPL", 100, 30., 1.)
-  let b2 = ("AAPL", 100, 29., 3.)
-  let b3 = ("AAPL", 100, 28., 5.)
-  let s1 = ("AAPL", 100, 31., 2.)
-  let s2 = ("AAPL", 100, 32., 4.)
-  let s3 = ("AAPL", 100, 33., 6.)
+  let bb = ("sean", 5, 13.5, 2.)
+  let bo = ("aaron", 5, 14., 3.)
+
+  let str = ME.orderbooks_to_json_string me1
+
+  let am1 = ME.get_account_manager me1
+  let jack = AccountManager.register am1 "jack" "password"
+  let aaron = AccountManager.register am1 "aaron" "password"
+  let sean = AccountManager.register am1 "sean" "password"
+  let mark = AccountManager.register am1 "mark" "password"
+
+  let () = Account.set_position jack "GOOG" 5
+  let () = Account.set_position aaron "GOOG" 5
+  let () = Account.set_position sean "GOOG" 5
+
+  let ticks = ME.tickers me1
+
+  let ob1 = ME.get_order_book me1 "GOOG" 
+  let ob2 = ME.get_order_book me2 "AAPL" 
+  let ob3 = ME.get_order_book me1 "AAPL"
+  let ob0 = ME.get_order_book me0 "GOOG"
+
+  let b1 = ("jack", 100, 13., 1.)
+  let s1 = ("aaron", 100, 29., 2.)
+
+  let () = ME.execute_market_order me1 Sell "AAPL" 5 "aaron"
+  let () = ME.execute_market_order me1 Buy "AAPL" 5 "aaron"
+  let () = ME.execute_regular_order me1 Buy b1 "AAPL"
+
+  let () = ME.execute_market_order me1 Buy "GOOG" 1 "mark"
 
   let test_member name me string expected_output : test = 
     name >:: (fun _ -> 
         assert_equal expected_output (ME.member me string))
 
+  let test_tickers name me expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (List.length(ME.tickers me)))
+
+  let test_ob_empty name ob expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (OrderBook.is_empty ob))
+
+  let test_ob_best_bid name ob expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (OrderBook.best_bid ob))
+
+  let test_ob_best_offer name ob expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (OrderBook.best_offer ob))
+
+  let test_error name f expected_error : test = 
+    name >:: (fun _ ->
+        assert_raises expected_error f)
+
+  let test_am_accounts name am expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (List.length(AccountManager.accounts am)))
+
+  let test_a_position name account ticker expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (Account.position account ticker))
+
+  let test_a_balance name account expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (Account.balance account ))
+
+  let test_a_username name account expected_output : test = 
+    name >:: (fun _ -> 
+        assert_equal expected_output (Account.username account ))
+
   let tests = [
     test_member "yes member" me1 "AAPL" true;
     test_member "no member" me1 "NO" false;
+    test_member "yes member 2" me1 "ROKU" true;
+    test_tickers "5 tickers" me2 5;
+    test_ob_empty "empty orderbook, empty me" ob2 true;
+    test_ob_empty "nonempty orderbook, nonempty me" ob1 false;
+    test_ob_empty "empty orderbook, nonempty me" ob3 true;
+    test_ob_best_bid "best bid" ob0 (Some bb);
+    test_ob_best_bid "no best bid" ob2 None;
+    test_ob_best_offer "best offer" ob0 (Some bo);
+    test_ob_best_offer "no best offer" ob2 None;
+    test_error "unbound ticker get ob" (fun () -> ME.get_order_book me1 "NO") 
+      UnboundTicker;
+    test_error "unbound put order" (fun () -> 
+        ME.execute_regular_order me2 Buy b1 "NO") UnboundTicker;
+    test_am_accounts "should be 3" am1 4;
+    test_a_position "should be 1" mark "GOOG" 1;
+    test_a_position "should be 4" aaron "GOOG" 4;
+    test_a_balance "should be 14.0" aaron 14.;
+    test_a_balance "should be -14.0" mark (-14.);
+    test_a_balance "should be 0.0" jack 0.;
+    test_a_position "should be 5" jack "GOOG" 5;
+    test_a_balance "should be 0.0" sean 0.;
+    test_a_position "should be 5" sean "GOOG" 5;
+    test_a_username "jack" jack "jack";
+    test_a_username "sean" sean "sean";
+    test_a_username "aaron" aaron "aaron";
   ]
 end
 
@@ -107,16 +196,20 @@ end
 
 module AccountTest2 (A: Account.Account) = struct
   open Account
+
   let empty = A.create_empty "Sean"
   let empty2 = A.create_empty "Aaron"
+
   let a1 = A.create "Jack" 100.
   let a2 = A.create "Aaron" 100.
   let a3 = A.create "Jimmy" 100.
+
   let () = A.set_position a2 "AAPL" 100
   let () = A.set_balance a3 0.
   let () = A.set_balance empty2 25.
 
-
+  let s = A.to_json_string a2 "pass"
+  let s2 = A.to_json_string empty "pass"
 
   let test_username name account expected_output : test = 
     name >:: (fun _ -> 
