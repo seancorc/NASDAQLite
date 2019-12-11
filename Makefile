@@ -39,7 +39,7 @@ bisect: clean test
 docs: docs-public docs-private
 
 zip:
-	zip nasdaq.zip *.ml* _tags .gitignore .ocamlinit .merlin Makefile INSTALL.md
+	zip nasdaq.zip *.ml* _tags .gitignore .ocamlinit .merlin Makefile INSTALL.md tickers_test.json users_test.json
 	
 docs-public: build
 	mkdir -p doc.public

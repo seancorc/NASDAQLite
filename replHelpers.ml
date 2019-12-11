@@ -60,7 +60,7 @@ let login (s : state) : state =
     print_endline "\n**Incorrect password**";
     s
   | (Invalid_username a) -> 
-    print_endline a;
+    print_endline ("\n**" ^ a ^ "**");
     s
   | _ -> 
     print_endline "\n**There was a server error, please try again.**";
@@ -189,8 +189,13 @@ let read_input s username input =
     let ticker = String.uppercase_ascii (String.trim(read_line ())) in 
     begin try 
         Dao.create_asset ticker;
+        print_endline "\n**Ticker created**";
         s
-      with _ -> 
+      with 
+      | Ticker_exists -> 
+        print_endline "\n**That asset already exists.**";
+        s
+      | _ ->
         print_endline "\n**There was a server error, please try again.**";
         s
     end

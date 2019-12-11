@@ -198,12 +198,15 @@ module ExchangeServer : ExchangeServer = struct
       let json_me = Yojson.Basic.from_file 
           (dirname ^ Filename.dir_sep ^ "engine.json") in
       let me = MatchingEngine.load_from_json json_me in
-      MatchingEngine.add_asset me ticker;
-      let json_string = MatchingEngine.orderbooks_to_json_string me in
-      let json_me = Yojson.Basic.from_string json_string in
-      Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") 
-        json_me;
-      successful_response
+      if MatchingEngine.member me ticker then 
+        error_response "ticker" "" () 
+      else
+        let _ = MatchingEngine.add_asset me ticker in 
+        let json_string = MatchingEngine.orderbooks_to_json_string me in
+        let json_me = Yojson.Basic.from_string json_string in
+        Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") 
+          json_me;
+        successful_response
     | exception e -> 
       invalid_request_body_error
 
