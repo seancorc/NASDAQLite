@@ -44,7 +44,9 @@ module type Dao = sig
       Raises: Server_error if there is an internal issue with the server. *)
   val execute_order : string -> string -> string -> string -> string -> unit
 
-  (**TODO Document *)
+  (** [create_asset ticker] makes a POST request to the server to create
+      an asset with ticker [ticker].
+      Raises: Server_error if there is an internal issue with the server. *)
   val create_asset : string -> unit
 end
 
