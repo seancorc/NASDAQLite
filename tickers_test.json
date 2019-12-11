@@ -1,0 +1,49 @@
+{
+  "tickers": [
+    {
+      "ticker": "GOOG",
+      "buys": [
+        {
+          "username": "sean",
+          "amount": 5,
+          "price": 13.5,
+          "time": 2.0
+        },
+        {
+          "username": "jack",
+          "amount": 5,
+          "price": 13.0,
+          "time": 1.0
+        }
+      ],
+      "sells": [
+        {
+          "username": "aaron",
+          "amount": 5,
+          "price": 14.0,
+          "time": 3.0
+        }
+      ]
+    },
+    {
+      "ticker": "AAPL",
+      "buys": [],
+      "sells": []
+    },
+    {
+      "ticker": "MSFT",
+      "buys": [],
+      "sells": []
+    },
+    {
+      "ticker": "AMZN",
+      "buys": [],
+      "sells": []
+    },
+    {
+      "ticker": "ROKU",
+      "buys": [],
+      "sells": []
+    }
+  ]
+}
