@@ -1,5 +1,5 @@
 (** Testing plan:
-    s
+
     The four modules being automatically tested with OUnit are 
     MatchingEngine.ml, AccountManager.ml, OrderBook.ml, and Account.ml. We are 
     testing these using glass-box testing, trying to achieve maximal 
