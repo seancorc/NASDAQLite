@@ -20,7 +20,8 @@ let rec start_loop () =
   | "signup" -> Signup
   | "delete" -> Delete
   | "quit" -> Stdlib.exit 0;
-  | _ -> print_endline "\n**I couldn't understand that command, please try again.**"; 
+  | _ -> print_endline 
+           "\n**I couldn't understand that command, please try again.**"; 
     start_loop ()
 
 (** [startup_action] prints the welcome message and prompts [start_loop]
@@ -121,14 +122,23 @@ let restart (s : state) : state  =
 (** [parse_order usr lst] Returns None if [lst] represents an invalid order or
     [Some (t, so)] where [t] is the ticker of the order and [so] is the 
     submitted order. *)
-let parse_order (usr: string) (lst: string list) : (string * submitted_order) option = 
+let parse_order (usr: string) (lst: string list) : (string * submitted_order) 
+    option = 
   try
     begin
       let ticker, submitted_order = match lst with 
-        | ["buy"; ticker; amount; price] -> ticker, (Buy, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
-        | ["sell"; ticker; amount; price] -> ticker, (Sell, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
-        | ["buy market"; ticker; amount] -> ticker, (Buy, (usr, (int_of_string amount), max_float, (Unix.time ())))
-        | ["sell market"; ticker; amount] -> ticker, (Sell, (usr, (int_of_string amount), min_float, (Unix.time ())))
+        | ["buy"; ticker; amount; price] -> 
+          ticker, (Buy, (usr, (int_of_string amount), (float_of_string price), 
+                         (Unix.time ())))
+        | ["sell"; ticker; amount; price] -> 
+          ticker, (Sell, (usr, (int_of_string amount), (float_of_string price), 
+                          (Unix.time ())))
+        | ["buy market"; ticker; amount] -> 
+          ticker, (Buy, (usr, (int_of_string amount), max_float, 
+                         (Unix.time ())))
+        | ["sell market"; ticker; amount] -> 
+          ticker, (Sell, (usr, (int_of_string amount), min_float, 
+                          (Unix.time ())))
         | _ -> raise Not_found in 
       Some ((ticker, submitted_order))
     end
@@ -151,10 +161,11 @@ let prompt_user_input username =
       (ticker,amount) :: acc) [] json_positions  in
   let balances = ("USD", (int_of_float usd_balance)) :: positions in 
   let _ = print_balances balances in 
-  print_endline "To log out of this account, type 'logout' and to create\
+  print_endline "To log out of this account, type 'logout' and to create \
                  an asset, type 'create' (to exit type 'quit')";
   print_endline "To place an order input: order type (Buy, Sell, Buy Market,\
-                 Sell Market), ticker, order size, price (only for Buy or Sell)";
+                 Sell Market), ticker, order size, price (only for Buy or Sell\
+                 )";
   String.lowercase_ascii (read_line ())
 
 

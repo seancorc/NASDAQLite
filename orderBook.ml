@@ -177,7 +177,9 @@ module OrderBook : OrderBook = struct
   let remove_tops ((b,s): t) : t = 
     match b, s with 
     | bh :: bt, sh :: st -> (bt, st)
+    (*BISECT-IGNORE-BEGIN*)
     | _ -> failwith "Cannot remove tops until at least May"
+  (*BISECT-IGNORE-END*)
 
   let delete_user ((b,s) : t) username : t = 
     let new_b  = List.filter (fun (u,_,_,_) -> 

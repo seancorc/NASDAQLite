@@ -99,12 +99,12 @@ module AccountManager : AccountManager = struct
     | [] -> ()
     | h :: t -> 
       let username = h |> to_assoc |> List.assoc "username" |> to_string in
-      let hashed_pass = h |> to_assoc |> List.assoc "hashed_pass" |> to_string in
-      let balance = h |> to_assoc |> List.assoc "balance" |> to_float in
+      let hashed_pass = h |> to_assoc |> List.assoc "hashed_pass" |> to_string 
+      in let balance = h |> to_assoc |> List.assoc "balance" |> to_float in
       let account = Account.create username balance in 
-      let _ = D.add am username (account, (Bcrypt.hash_of_string hashed_pass)) in 
-      let list_of_orders = (h |> to_assoc |> List.assoc "orders" |> to_list) in
-      populate_orders list_of_orders account;
+      let _ = D.add am username (account, (Bcrypt.hash_of_string hashed_pass)) 
+      in let list_of_orders = (h |> to_assoc |> List.assoc "orders" |> to_list) 
+      in populate_orders list_of_orders account;
       populate_manager am t;
       ()
 

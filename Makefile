@@ -1,6 +1,6 @@
 # state accountManager
 
-MODULES=account orderBook matchingEngine accountManager dao
+MODULES=account orderBook matchingEngine accountManager dao exchangeServer
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)
