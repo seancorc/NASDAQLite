@@ -116,8 +116,8 @@ module MatchingEngine : MatchingEngine = struct
     else raise UnboundTicker
 
   (** [populate_orders_for_direction me orders ticker direction] recieves all
-      orders in json list [orders] in direction [direction] for ticker [ticker] in 
-      matching engline [me]. *)
+      orders in json list [orders] in direction [direction] for ticker [ticker] 
+      in matching engline [me]. *)
   let rec populate_orders_for_direction me orders ticker direction =
     match orders with 
     | [] -> ()

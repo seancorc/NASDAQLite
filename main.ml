@@ -2,7 +2,7 @@ open AccountManager
 open Account
 open OrderBook
 open MatchingEngine
-open Helpers
+open ReplHelpers
 
 (** [main] creates a new AccountManager instance, State, and prompts the user
     to log into an account or register a new one. *)
