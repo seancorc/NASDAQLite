@@ -49,10 +49,10 @@ let login (s : state) : state =
     let _ = Dao.login_user username password in
     {username=Some username}
   with 
-  | InvalidPassword ->
+  | Invalid_password ->
     print_endline "Incorrect password";
     s
-  | (InvalidUsername a) -> 
+  | (Invalid_username a) -> 
     print_endline a;
     s
   | _ -> 
@@ -71,10 +71,10 @@ let register (s : state) : state =
     let new_s = {username=Some username} in 
     new_s  
   with 
-  | InvalidPassword ->
+  | Invalid_password ->
     print_endline "Incorrect password";
     s
-  | (InvalidUsername a) -> 
+  | (Invalid_username a) -> 
     print_endline a;
     s
   | _ -> 

@@ -33,8 +33,8 @@ end
 (** [D] is a Hashtbl using StringHash as a key *)
 module D = Hashtbl.Make(StringHash)
 
-exception InvalidUsername of string
-exception InvalidPassword
+exception Invalid_username of string
+exception Invalid_password
 
 
 (** [hash_pw p] is the hash of p after running the bcrypt algorithm on it *)
@@ -62,7 +62,7 @@ module AccountManager : AccountManager = struct
 
   let register (m: t) (username: string) (password: string) : Account.t = 
     let exists = D.mem m username in 
-    if exists then raise (InvalidUsername "Username is taken")
+    if exists then raise (Invalid_username "Username is taken")
     else 
       let account = Account.create_empty username in 
       let _ = D.add m username (account, (hash_pw password)) in 
@@ -80,7 +80,8 @@ module AccountManager : AccountManager = struct
                                                "," else "")) t in
     create "{\"users\": [" accounts ^ "]}"
 
-
+  (** [populate_orders orders acct] parses an indivdual json object from 
+      [orders] into a position and adds that position to [acct]'s positions *)
   let rec populate_orders orders acct =
     match orders with 
     | [] -> ()
@@ -91,6 +92,8 @@ module AccountManager : AccountManager = struct
       populate_orders t acct;
       ()
 
+  (** [populate_manager am users] parses an indivdual json object from [users]
+      into a user and adds that user to AccountManager [am] *)
   let rec populate_manager am users = 
     match users with 
     | [] -> ()
@@ -148,9 +151,9 @@ module AccountManager : AccountManager = struct
     | Some (account, password_hash) ->
       begin
         if (verify_pw password password_hash) then account 
-        else raise InvalidPassword
+        else raise Invalid_password
       end
-    | None -> raise (InvalidUsername "Username does not exist")
+    | None -> raise (Invalid_username "Username does not exist")
 
   let delete_user (m: t) (username: string) (password: string) : unit = 
     match D.find_opt m username with 
@@ -159,9 +162,9 @@ module AccountManager : AccountManager = struct
         if (verify_pw password password_hash) then 
           let _ = D.remove m username in 
           ()
-        else raise InvalidPassword
+        else raise Invalid_password
       end
-    | None -> raise (InvalidUsername "Username does not exist")
+    | None -> raise (Invalid_username "Username does not exist")
 
   let accounts (m: t) : string list = 
     D.fold (fun k v l -> k :: l) m []

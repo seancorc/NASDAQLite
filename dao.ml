@@ -49,6 +49,17 @@ module Dao : Dao = struct
     json
 
 
+  let handle_credentials_error json = 
+    let assoc = json |> to_assoc in
+    let error_type =  assoc |> List.assoc "error" |> to_string in
+    let msg = assoc |> List.assoc "message" |> to_string in
+    if error_type = "password" then 
+      raise Invalid_password
+    else if error_type = "username" then
+      raise (Invalid_username msg)
+    else
+      raise Server_Error 
+
   let signup_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
     \"pass\":\"" ^ pass ^ "\"}" in
@@ -62,14 +73,7 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | false -> 
-      let error_type = json |> to_assoc |> List.assoc "error" |> to_string in
-      if error_type = "password" then 
-        raise InvalidPassword
-      else if error_type = "username" then
-        raise (InvalidUsername "Username is taken")
-      else
-        raise Server_Error 
+    | false -> handle_credentials_error json
 
   let login_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
@@ -84,22 +88,15 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | false -> 
-      let error_type = json |> to_assoc |> List.assoc "error" |> to_string in
-      if error_type = "password" then 
-        raise InvalidPassword
-      else if error_type = "username" then
-        raise (InvalidUsername "Username does not exist")
-      else
-        raise Server_Error 
+    | false -> handle_credentials_error json
 
   let execute_order username dir ticker amount price = 
     let json_string = "{\n\"username\":\""^ username ^"\",
     \"amount\":"^ amount ^",
     \"direction\":\""^ dir ^"\",
-    \"price\":"^ price ^",
+    \"price\":"^ price ^"0,
     \"time\":"^ string_of_float (Unix.time ()) ^ "0," ^ "
-    \"ticker\":"^ ticker ^",
+    \"ticker\":\""^ ticker ^"\"
     }" in 
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
