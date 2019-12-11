@@ -11,17 +11,27 @@ let dirname = "data"
 let successful_response = "{\"success\": true}"
 let invalid_request_body_error = "{\"success\": false, 
                                   \"error\": \"Invalid request body\"}"
-let error_response err _ = "{\"success\": false, \"error\": \"" ^ err ^ "\"}" 
-exception Ticker_Not_Found
-exception Invalid_Direction
-exception Parse_Error
+let error_response err msg _ = "{\"success\": false, 
+                            \"error\": \"" ^ err ^ "\",
+                            \"message\": \"" ^ msg ^ "\"}" 
+
+exception Ticker_not_found
+exception Invalid_direction
+
+
+let get_accounts _ =
+  match Yojson.Basic.from_file 
+          ("data" ^ Filename.dir_sep ^ "accounts.json") with 
+  | v -> Yojson.Basic.pretty_to_string v
+  | exception e -> "Error Parsing File"
 
 let find_user username user = 
   let other_username = user |> to_assoc |> List.assoc "username" |> to_string in 
   username = other_username
 
 let get_account_balance username _ =
-  let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+  let json = Yojson.Basic.from_file 
+      (dirname ^ Filename.dir_sep ^ "accounts.json") in
   let users = json |> to_assoc |> List.assoc "users" |> to_list in
   let user = List.find (find_user username) users in
   let balance = (user |> to_assoc |> List.assoc "balance" |> to_float) in
@@ -40,7 +50,8 @@ let rec create_orders_json orders acc =
     create_orders_json t (acc ^ order_json)
 
 let get_account_positions username _ =
-  let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+  let json = Yojson.Basic.from_file 
+      (dirname ^ Filename.dir_sep ^ "accounts.json") in
   let users = json |> to_assoc |> List.assoc "users" |> to_list in
   let user = List.find (find_user username) users in
   let orders = (user |> to_assoc |> List.assoc "orders" |> to_list) in
@@ -50,7 +61,8 @@ let get_account_positions username _ =
 let signup body =
   match Yojson.Basic.from_string body with 
   | credentials ->
-    let json_am = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let json_am = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "accounts.json") in
     let am = AccountManager.load_from_json json_am in 
     let assoc = to_assoc credentials in
     let username = assoc |> List.assoc "username" |> to_string in
@@ -59,28 +71,16 @@ let signup body =
         let _ = AccountManager.register am username pass in
         let json_string = AccountManager.to_json_string am in
         let json_am = Yojson.Basic.from_string json_string in
-        Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") json_am;
+        Yojson.Basic.to_file 
+          (dirname ^ Filename.dir_sep ^ "accounts.json") json_am;
         successful_response
       with 
-      | InvalidPassword -> error_response "password" ()
-      | InvalidUsername a -> error_response "username" ()
+      | Invalid_username a -> error_response "username" a ()
+      | Invalid_password -> error_response "password" "" ()
     end
   | exception e ->
     invalid_request_body_error
 
-
-let get_specific_ticker ticker tickers = 
-  let rec find_ticker_and_accumulate_others acc = 
-    match tickers with 
-    | [] -> raise Ticker_Not_Found
-    | h :: t -> 
-      let current_ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
-      if current_ticker = ticker then 
-        h, (acc @ t)
-      else 
-        let ots = (h :: acc) in
-        find_ticker_and_accumulate_others ots in 
-  find_ticker_and_accumulate_others []
 
 let update_ticker_json tj direction order : Yojson.Basic.t =
   let assoc = to_assoc tj in
@@ -94,18 +94,23 @@ let update_ticker_json tj direction order : Yojson.Basic.t =
     `Assoc ["ticker", `String ticker;"buys", `List buys;"sells", 
                                                         `List (order :: sells)] 
   else 
-    raise Invalid_Direction 
+    raise Invalid_direction 
 
 let to_direction = function
   | "buy" -> Buy
   | "sell" -> Sell 
-  | _ -> raise Invalid_Direction
+  | _ -> raise Invalid_direction
 
 let execute_order body = 
   match Yojson.Basic.from_string body with 
   | json_order -> 
-    let json_me = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "engine.json") in
+    let json_me = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "engine.json") in
     let me = MatchingEngine.load_from_json json_me in
+    let json_am = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let am = AccountManager.load_from_json json_am in
+    let new_me = MatchingEngine.set_account_manager me am in
     let assoc = to_assoc json_order in 
     let dir = assoc |> List.assoc "direction" |> to_string |> to_direction in
     let username = assoc |> List.assoc "username" |> to_string in
@@ -113,12 +118,20 @@ let execute_order body =
     let amount = assoc |> List.assoc "amount" |> to_int in
     let price = assoc |> List.assoc "price" |> to_float in
     let tickers = MatchingEngine.tickers me in 
-    if not (List.mem ticker tickers) then (error_response "Invalid Ticker" ()) else
+    if not (List.mem ticker tickers) then 
+      (error_response "Invalid Ticker" "" ()) 
+    else
       let order = (username, amount, price, Unix.time ()) in
-      let _ = MatchingEngine.execute_regular_order me dir order ticker in 
-      let json_string = MatchingEngine.orderbooks_to_json_string me in
+      let _ = MatchingEngine.execute_regular_order new_me dir order ticker in 
+      let json_string = MatchingEngine.orderbooks_to_json_string new_me in
       let json_me = Yojson.Basic.from_string json_string in
-      Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") json_me;
+      Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") 
+        json_me;
+      let updated_am = MatchingEngine.get_account_manager new_me in
+      let json_string = AccountManager.to_json_string updated_am in
+      let json_am = Yojson.Basic.from_string json_string in
+      Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") 
+        json_am;
       successful_response
   | exception e ->
     invalid_request_body_error
@@ -126,7 +139,8 @@ let execute_order body =
 let login body = 
   match Yojson.Basic.from_string body with 
   | credentials -> 
-    let json_am = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let json_am = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "accounts.json") in
     let am = AccountManager.load_from_json json_am in 
     let assoc = to_assoc credentials in
     let username = assoc |> List.assoc "username" |> to_string in
@@ -135,29 +149,34 @@ let login body =
         let _ = AccountManager.login am username pass in
         successful_response
       with 
-      | InvalidPassword -> error_response "password" ()
-      | InvalidUsername a -> error_response "username" ()
-      | _ -> error_response "login unsuccessful" ()
+      | Invalid_username a -> error_response "username" a ()
+      | Invalid_password -> error_response "password" ""()
+      | _ -> error_response "login unsuccessful" "" ()
     end
   | exception e -> 
     invalid_request_body_error
 
-
-let add_order body = 
+let delete body = 
   match Yojson.Basic.from_string body with 
-  | req_body ->
-    let ticker = req_body |> to_assoc |> List.assoc "ticker" |> to_string in
-    let order = req_body |> to_assoc |> List.assoc "order" in
-    let direction = req_body |> to_assoc |> List.assoc "direction" |> to_string 
-                    |> String.lowercase_ascii in 
-    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "engine.json") in
-    let all_tickers = json |> to_assoc |> List.assoc "tickers" |> to_list in
-    let ticker_json, other_tickers = get_specific_ticker ticker all_tickers in
-    let updated_tj = update_ticker_json ticker_json direction order in
-    let (new_json : Yojson.Basic.t) = `Assoc ["tickers", `List (updated_tj :: 
-                                                                other_tickers)] in
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") new_json;
-    successful_response
+  | credentials -> 
+    let json_am = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let am = AccountManager.load_from_json json_am in 
+    let assoc = to_assoc credentials in
+    let username = assoc |> List.assoc "username" |> to_string in
+    let pass = assoc |> List.assoc "pass" |> to_string in
+    begin try 
+        let _ = AccountManager.delete_user am username pass in
+        let json_string = AccountManager.to_json_string am in
+        let json_am = Yojson.Basic.from_string json_string in
+        Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") 
+          json_am;
+        successful_response
+      with 
+      | Invalid_username a -> error_response "username" a ()
+      | Invalid_password -> error_response "password" "" ()
+      | _ -> error_response "login unsuccessful" "" ()
+    end
   | exception e -> 
     invalid_request_body_error
 
@@ -165,23 +184,31 @@ let add_order body =
 let _ = Cohttp_lwt_unix__.Debug.activate_debug () 
 let base_uri = "//localhost:8000"
 
-
-let not_implemented body = error_response "Not yet implemented" ()
-
 let appropriate_method uri meth =
-  let account_balance_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/balance\\/" in
-  let account_positions_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/positions\\/" in
-  if uri = (base_uri ^ "/account/login/") then 
+  let account_balance_regex = 
+    Str.regexp "\\/\\/localhost:8000\\/account\\/balance\\/" in
+  let account_positions_regex = 
+    Str.regexp "\\/\\/localhost:8000\\/account\\/positions\\/" in
+  if uri = (base_uri ^ "/accounts/") then 
+    begin match meth with
+      | "GET" -> get_accounts
+      | _ -> error_response "Method Not Supported" ""
+    end
+  else if uri = (base_uri ^ "/account/login/") then 
     begin match meth with 
       | "POST" -> login
-      | "DELETE" -> not_implemented
-      | _ -> error_response "Method Not Supported"
+      | _ -> error_response "Method Not Supported" ""
+    end
+  else if uri = (base_uri ^ "/account/delete/") then
+    begin match meth with
+      | "DELETE" -> delete
+      | _ -> error_response "Method Not Supported" ""
     end
   else if uri = (base_uri ^ "/account/signup/") then 
     begin match meth with 
       | "POST" -> signup
       (* | "DELETE" -> not_implemented *)
-      | _ -> error_response "Method Not Supported"
+      | _ -> error_response "Method Not Supported" ""
     end
   else if Str.string_match account_balance_regex 
       (uri ^ "/account/balance/") 0 then 
@@ -190,7 +217,7 @@ let appropriate_method uri meth =
         (String.length uri - (slash_index + 2)) in
     begin match meth with 
       | "GET" -> get_account_balance username
-      | _ -> error_response "Method Not Supported"
+      | _ -> error_response "Method Not Supported" ""
     end
   else if Str.string_match account_positions_regex 
       (uri ^ "/account/positions/") 0 then 
@@ -199,7 +226,7 @@ let appropriate_method uri meth =
         (String.length uri - (slash_index + 2)) in
     begin match meth with 
       | "GET" -> get_account_positions username
-      | _ -> error_response "Method Not Supported"
+      | _ -> error_response "Method Not Supported" ""
     end
     (* match username and ticker symbol -> return balance ie. amount
        and another route for get all positions
@@ -207,9 +234,9 @@ let appropriate_method uri meth =
   else if uri = (base_uri ^ "/engine/") then
     begin match meth with 
       | "POST" -> execute_order
-      | _ -> error_response "Method Not Supported"
+      | _ -> error_response "Method Not Supported" ""
     end
-  else error_response "404 Route Not Found"
+  else error_response "404 Route Not Found" ""
 
 
 let server =
@@ -224,5 +251,33 @@ let server =
         Server.respond_string ~status:`OK ~body ())
   in
   Server.create ~mode:(`TCP (`Port 8000)) (Server.make ~callback ())
+
+
+let rec create_default_tickers dt =
+  match dt with 
+  | [] -> []
+  | h :: t -> `Assoc[("ticker", `String h);("buys",`List[]);("sells",`List[])] 
+              :: (create_default_tickers t)
+
+let setup_data_directory _ =
+  try 
+    let accounts_file_name = "accounts.json" in
+    let engine_file_name = "engine.json" in
+    Unix.mkdir dirname 0o775;
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
+    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ engine_file_name) in
+    let starting_accounts_json = `Assoc["users", `List []] in 
+    let default_tickers = create_default_tickers 
+        ["GOOG"; "MSFT"; "AAPL"; "ROKU"; "AMZN"] in
+    let starting_engine_json = `Assoc["tickers", `List default_tickers] in 
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ accounts_file_name) 
+      starting_accounts_json;
+    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ engine_file_name) 
+      starting_engine_json;
+    ()
+  with _ ->
+    ()
+
+let () = setup_data_directory ()
 
 let () = ignore (Lwt_main.run server)

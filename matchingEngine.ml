@@ -14,6 +14,7 @@ module type MatchingEngine = sig
   val get_order_book : t -> string -> OrderBook.t
   val load_from_json : Yojson.Basic.t -> t
   val get_account_manager : t -> AccountManager.t
+  val set_account_manager : t -> AccountManager.t -> t
 end
 
 exception UnboundTicker
@@ -51,21 +52,15 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    try 
-      let json = Dao.get_account_data () in
-      let am = AccountManager.load_from_json json in 
-      {
-        orderbooks = obs;
-        account_manager = am;
-      }
-    with _ ->
-      let am = AccountManager.create () in 
-      {
-        orderbooks = obs;
-        account_manager = am;
-      }
+    let am = AccountManager.create () in 
+    {
+      orderbooks = obs;
+      account_manager = am;
+    }
 
   let get_account_manager (me: t) = me.account_manager
+
+  let set_account_manager me am = {orderbooks=me.orderbooks;account_manager=am}
 
   let orderbooks_to_json_string (me : t) = 
     let obs = D.fold (fun ticker ob acc -> 
