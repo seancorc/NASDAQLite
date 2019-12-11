@@ -9,7 +9,8 @@ module type MatchingEngine = sig
   val create : unit -> t
   val member : t -> string -> bool
   val execute_regular_order : t -> order_direction -> order -> string -> unit
-  val execute_market_order : t -> order_direction -> string -> int -> string -> unit
+  val execute_market_order : t -> order_direction -> string -> int -> string 
+    -> unit
   val tickers : t -> string list
   val get_order_book : t -> string -> OrderBook.t
   val load_from_json : Yojson.Basic.t -> t
@@ -19,9 +20,12 @@ module type MatchingEngine = sig
   val add_asset : t -> string -> unit
 end
 
+(** [UnboundTicker] is an exception indicating that the specified ticker was 
+    invalid *)
 exception UnboundTicker
 
-(** [StringHash] is a module representing a HashedType using String as the key*)
+(** [StringHash] is a module representing a HashedType using String as the 
+    key *)
 module StringHash = struct
   type t = string
 
@@ -33,7 +37,7 @@ module StringHash = struct
   let hash i = Hashtbl.hash i
 end
 
-
+(** [D] is a module representing a HashedType using String as the key *)
 module D = Hashtbl.Make(StringHash)
 
 module MatchingEngine : MatchingEngine = struct
@@ -43,8 +47,10 @@ module MatchingEngine : MatchingEngine = struct
     account_manager: AccountManager.t;
   }
 
+  (** [aapl] is the empty orderbook. *)
   let aapl = OrderBook.empty
 
+  (** [no_tickers] is a hash map with strings as keys with 20 buckets. *)
   let no_tickers = D.create 20
 
   let create _ = 
@@ -94,6 +100,11 @@ module MatchingEngine : MatchingEngine = struct
       ob
     else raise UnboundTicker
 
+  (** [recieve_order me direction order] recieves order [order] in direction 
+      [direction] and inputs the order into the order book in matching 
+      engine [me].
+      Raises: UnboundTicker if the ticker is not available in matching engine 
+      [me]. *)
   let receive_order (me: t) (direction: order_direction) (order: order) 
       (ticker: string) : unit =  
     if member me ticker then 
@@ -104,6 +115,9 @@ module MatchingEngine : MatchingEngine = struct
       D.replace obs ticker ob'
     else raise UnboundTicker
 
+  (** [populate_orders_for_direction me orders ticker direction] recieves all
+      orders in json list [orders] in direction [direction] for ticker [ticker] in 
+      matching engline [me]. *)
   let rec populate_orders_for_direction me orders ticker direction =
     match orders with 
     | [] -> ()
@@ -117,6 +131,8 @@ module MatchingEngine : MatchingEngine = struct
       populate_orders_for_direction me t ticker direction;
       ()
 
+  (** [populate_engine me tickers] recieves all orders for all tickers in json
+      list [tickers] in matching engine [me]. *)
   let rec populate_engine me tickers = 
     match tickers with 
     | [] -> ()
@@ -136,6 +152,9 @@ module MatchingEngine : MatchingEngine = struct
     populate_engine me tickers;
     me
 
+  (** [repeat_parse ob acc] repeatedly contructs transactions from orderbook 
+      [ob] and lists them in transaction list [acc] until no more transactions 
+      can take place. *)
   let rec repeat_parse (ob: OrderBook.t) (acc: transaction list) 
     : (transaction list) * OrderBook.t = 
     let tx_opt, ob' = OrderBook.construct_tx ob in 
@@ -147,15 +166,23 @@ module MatchingEngine : MatchingEngine = struct
       end
     | None -> acc, ob'
 
+  (** [parse_order_book me ticker] creates a list of transactions to take place 
+      in the orderbook in matching engine [me] for string ticker [ticker]. *)
   let parse_order_book (me: t) (ticker: string) 
     : (transaction list) * OrderBook.t = 
     let ob = get_order_book me ticker in 
     repeat_parse ob []
 
+  (** [update_orderbook me ticker ob] replaces the orderbook for string ticker
+      [ticker] in matching engine [me] with orderbook [ob]. *)
   let update_orderbook (me: t) (ticker: string) (ob: OrderBook.t) : unit = 
     D.replace me.orderbooks ticker ob 
 
-  let process_transaction (am: AccountManager.t) (tx: float * int * string * string) (ticker: string) : unit = 
+  (** [process_transaction am tx ticker] processes the transaction [tx] for
+      string ticker [ticker] and updates the balances and positions in account
+      manager [am] for the accounts involved. *)
+  let process_transaction (am: AccountManager.t) 
+      (tx: float * int * string * string) (ticker: string) : unit = 
     match tx with 
     | p, amt, b, s -> 
       begin 
@@ -168,8 +195,11 @@ module MatchingEngine : MatchingEngine = struct
         ()
       end
 
-
-  let rec process_transactions (am: AccountManager.t) (txs: transaction list) (ticker: string) : unit = 
+  (** [process_transactions am txs ticker] processes all of the transactions
+      in transaction list [txs] for string ticker [ticker] in account manager
+      [am]. *)
+  let rec process_transactions (am: AccountManager.t) (txs: transaction list) 
+      (ticker: string) : unit = 
     match txs with 
     | tx :: t -> 
       process_transaction am tx ticker;
@@ -177,6 +207,8 @@ module MatchingEngine : MatchingEngine = struct
       ()
     | [] -> ()
 
+  (** [clear_market_orders ob] clears all of the market orders from
+      orderbook [ob]. *)
   let clear_market_orders (ob: OrderBook.t) = 
     match OrderBook.best_bid ob, OrderBook.best_offer ob with 
     | Some (_, _, price, _), _ when price = max_float -> 
@@ -195,7 +227,8 @@ module MatchingEngine : MatchingEngine = struct
     let _ = update_orderbook me ticker ob1 in
     ()
 
-  let execute_market_order (me: t) (direction: order_direction) (ticker: string) (amount: int) (addr: string): unit = 
+  let execute_market_order (me: t) (direction: order_direction) (ticker: string) 
+      (amount: int) (addr: string): unit = 
     let order = match direction with 
       | Buy -> (addr, amount, max_float, Unix.time ())
       | Sell -> (addr, amount, min_float, Unix.time ())in 

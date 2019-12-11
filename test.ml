@@ -1,3 +1,45 @@
+(** Testing plan:
+
+    The four modules being automatically tested with OUnit are 
+    MatchingEngine.ml, AccountManager.ml, OrderBook.ml, and Account.ml. We are 
+    testing these using glass-box testing, trying to achieve maximal 
+    code-coverage through bisect. Test functions were developed to cover each 
+    possible case for each function in order to maximize our coverage. 
+
+    We chose to test these using OUnit because they are the core modules in our 
+    system with specific, separate functions which must work individually in 
+    order for the entire system to work together. They do not depend on the 
+    server and therefore are more easily and accurately tested than other 
+    modules discussed later. These modules handle orders, accounts, and 
+    matching, which is essentially the “back end” of our stock exchange. The 
+    clients cannot see these things taking place, but their correctness is 
+    essential for our system to accurately work for its intended purpose. So, 
+    by testing these through OUnit using test driven development and getting 
+    maximal code coverage, we know that the “back end” calculations of our stock 
+    exchange are carried out correctly.
+
+    The four modules being manually tested are dao.ml, helpers.ml, 
+    exchangeServer.ml, and main.ml. We are testing these manually because they 
+    make up the user-interface and server section of our system, or the “front 
+    end”. These can be tested more easily through manual testing. 
+
+    We used glass-box testing in our manual testing. We are interacting with 
+    the UI and connecting with the server while looking at the actual code in 
+    these modules in order to cover all of the possible functions and cases to 
+    ensure that the user can successfully access and use our system. 
+
+    This testing approach demonstrates the correctness of our system in two 
+    ways. First, we know that in the back end, the calculations, orders, and 
+    accounts are being handled correctly due to our OUnit tests covering over 
+    90% of the code in the four modules tested using these methods. In other 
+    words, our system has the functionality on the back end of an actual stock 
+    exchange. Second, our UI and server have been specifically manually tested 
+    to account for each situation we can think of and that our code covers. 
+    This ensures that users will be able to smoothly and successfully use and 
+    access the functionality that was correctly implemented on the back end. 
+    With these two methods combined, we ensure that our system runs correctly.
+*)
+
 open OUnit2
 
 module type Tests = sig 

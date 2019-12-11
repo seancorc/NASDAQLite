@@ -1,4 +1,3 @@
-
 module type Account = sig 
   type t
   val to_json_string : t -> string -> string
@@ -12,7 +11,6 @@ module type Account = sig
   val set_balance : t -> float -> unit
   val format : Format.formatter -> t -> unit
 end
-
 
 (** [StringHash] is a module representing a HashedType using String as the key*)
 module StringHash = struct
@@ -31,16 +29,14 @@ module Account : Account = struct
   (** [D] is a Hashtbl using StringHash as a key *)
   module D = Hashtbl.Make(StringHash)
 
-  (**
-     AF: Represents Accounts by storing its username and balances in a record
-     with balances stored in a Hashtbl mapping strings to floats. 
-     RI: No additional constraints. *)
   type t = {
     username: string;
     balance: float ref;
     positions: int D.t;
   }
 
+  (** [create_order_from_json string o] creates a json string of the orders in 
+      [orders]. *)
   let create_orders_json_string orders =
     let rec create base_string ords =   
       match ords with 

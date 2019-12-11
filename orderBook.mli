@@ -1,4 +1,5 @@
-(** [order_type] is the direction of a single order: Buy or Sell. *)
+(** [order_direction] is the direction of a single order: either 
+    Buy or Sell. *)
 type order_direction = Buy | Sell
 
 (** [order] is a single order element
@@ -12,12 +13,20 @@ type transaction = float * int * string * string
 (** [submitted_order] represents an order and its direction *)
 type submitted_order = order_direction * order
 
-
+(** [OrderBook] is the signature for the module type that will store
+    all buy and sell orders for a given ticker. *)
 module type OrderBook = sig
+  (** AF: Represents OrderBook as as a tuple of two lists of type [order] 
+      elements. 
+      RI: All of the orders in first list are  buy orders and all of the orders
+      in the second list are sell orders. 
+      Orders are stored in preference order with better prices always at the 
+      front of the list. *)
 
   (** [t] is the type of order books. *)
   type t
 
+  (** [to_json_string ob] is the orderbook [ob] in string json form. *)
   val to_json_string : t -> string
 
   (** [empty] is the empty order book. *)
@@ -34,8 +43,10 @@ module type OrderBook = sig
         false otherwise. *)
   val no_sells : t -> bool
 
+  (** [buys ob] is the order list of buy orders in orderbook [ob.] *)
   val buys : t -> order list
 
+  (** [sells ob] is the order list of sell orders in orderbook [ob.] *)
   val sells : t -> order list
 
   (** [size ob] is the total number of orders in the orderbook [ob]. *)
@@ -70,4 +81,5 @@ module type OrderBook = sig
   val delete_user : t -> string -> t
 end
 
+(** [OrderBook] is the implementation of the OrderBook signature *)
 module OrderBook : OrderBook
