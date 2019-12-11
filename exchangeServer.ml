@@ -3,19 +3,17 @@ open Lwt
 open Cohttp
 open Cohttp_lwt_unix
 open Yojson.Basic.Util
+open MatchingEngine
+open AccountManager
+open OrderBook
 
 let dirname = "data"
 let successful_response = "{\"success\": true}"
 let invalid_request_body_error = "{\"error\": \"Invalid request body\"}"
+let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" 
 exception Ticker_Not_Found
 exception Invalid_Direction
 exception Parse_Error
-
-let get_accounts _ =
-  match Yojson.Basic.from_file 
-          ("data" ^ Filename.dir_sep ^ "accounts.json") with 
-  | v -> Yojson.Basic.pretty_to_string v
-  | exception e -> "Error Parsing File"
 
 let find_user username user = 
   let other_username = user |> to_assoc |> List.assoc "username" |> to_string in 
@@ -32,8 +30,9 @@ let rec create_orders_json orders acc =
   match orders with 
   | [] -> acc 
   | h :: t -> 
-    let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
-    let amount = h |> to_assoc |> List.assoc "amount" |> to_int in
+    let assoc = to_assoc h in
+    let ticker = assoc |> List.assoc "ticker" |> to_string in
+    let amount = assoc |> List.assoc "amount" |> to_int in
     let order_json = "{\"ticker\": \"" ^ ticker ^ "\",
       \"amount\": " ^ (string_of_int amount) ^ "}" ^ if List.length t >= 1
                      then ",\n" else "\n" in 
@@ -46,15 +45,8 @@ let get_account_positions username _ =
   let orders = (user |> to_assoc |> List.assoc "orders" |> to_list) in
   "{\"success\": true, \"data\":[" ^ (create_orders_json orders "") ^ "]}"
 
-let write_accounts body = 
-  match Yojson.Basic.from_string body with 
-  | am -> 
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") am;
-    successful_response
-  | exception e ->
-    invalid_request_body_error
 
-let add_account body =
+let signup body =
   match Yojson.Basic.from_string body with 
   | new_user ->
     let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
@@ -65,19 +57,6 @@ let add_account body =
   | exception e -> 
     invalid_request_body_error
 
-let get_engine _ = 
-  match Yojson.Basic.from_file 
-          ("data" ^ Filename.dir_sep ^ "engine.json") with 
-  | v -> Yojson.Basic.pretty_to_string v
-  | exception e -> "Error Parsing File"
-
-let write_engine body = 
-  match Yojson.Basic.from_string body with 
-  | me -> 
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") me;
-    successful_response
-  | exception e ->
-    invalid_request_body_error
 
 let get_specific_ticker ticker tickers = 
   let rec find_ticker_and_accumulate_others acc = 
@@ -93,9 +72,10 @@ let get_specific_ticker ticker tickers =
   find_ticker_and_accumulate_others []
 
 let update_ticker_json tj direction order : Yojson.Basic.t =
-  let ticker = tj |> to_assoc |> List.assoc "ticker" |> to_string in
-  let buys = tj |> to_assoc |> List.assoc "buys" |> to_list in
-  let sells = tj |> to_assoc |> List.assoc "sells" |> to_list in
+  let assoc = to_assoc tj in
+  let ticker = assoc |> List.assoc "ticker" |> to_string in
+  let buys = assoc |> List.assoc "buys" |> to_list in
+  let sells = assoc |> List.assoc "sells" |> to_list in
   if direction = "buy" then 
     `Assoc ["ticker", `String ticker;"buys", `List (order :: buys);"sells", 
                                                                    `List sells] 
@@ -105,6 +85,49 @@ let update_ticker_json tj direction order : Yojson.Basic.t =
   else 
     raise Invalid_Direction 
 
+
+let to_direction = function
+  | "buy" -> Buy
+  | "sell" -> Sell 
+  | _ -> raise Invalid_Direction
+
+let execute_order body = 
+  match Yojson.Basic.from_string body with 
+  | json_order -> 
+    let json_me = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "engine.json") in
+    let me = MatchingEngine.load_from_json json_me in
+    let assoc = to_assoc json_order in 
+    let dir = assoc |> List.assoc "direction" |> to_string |> to_direction in
+    let username = assoc |> List.assoc "username" |> to_string in
+    let ticker = assoc |> List.assoc "ticker" |> to_string in
+    let amount = assoc |> List.assoc "amount" |> to_int in
+    let price = assoc |> List.assoc "price" |> to_float in
+    let tickers = MatchingEngine.tickers me in 
+    if not (List.mem ticker tickers) then (error_response "Invalid Ticker" ()) else
+      let order = (username, amount, price, Unix.time ()) in
+      let _ = MatchingEngine.execute_regular_order me dir order ticker in 
+      let json_string = MatchingEngine.orderbooks_to_json_string me in
+      let json_me = Yojson.Basic.from_string json_string in
+      Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") json_me;
+      successful_response
+  | exception e ->
+    invalid_request_body_error
+
+let login body = 
+  match Yojson.Basic.from_string body with 
+  | credentials -> 
+    let json_am = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let am = AccountManager.load_from_json json_am in 
+    let assoc = to_assoc credentials in
+    let username = assoc |> List.assoc "username" |> to_string in
+    let pass = assoc |> List.assoc "pass" |> to_string in
+    try 
+      let _ = AccountManager.login am username pass in
+      successful_response
+    with 
+    | InvalidPassword -> error_response "password" ()
+    | InvalidUsername a -> error_response "username" ()
+    | _ -> error_response "login unsuccessful" ()
 
 let add_order body = 
   match Yojson.Basic.from_string body with 
@@ -125,8 +148,6 @@ let add_order body =
     invalid_request_body_error
 
 
-let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" 
-
 let _ = Cohttp_lwt_unix__.Debug.activate_debug () 
 let base_uri = "//localhost:8000"
 
@@ -136,17 +157,16 @@ let not_implemented body = error_response "Not yet implemented" ()
 let appropriate_method uri meth =
   let account_balance_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/balance\\/" in
   let account_positions_regex = Str.regexp "\\/\\/localhost:8000\\/account\\/positions\\/" in
-  if uri = (base_uri ^ "/accounts/") then 
+  if uri = (base_uri ^ "/account/login/") then 
     begin match meth with 
-      (* Get rid of this, should not allow *)
-      | "GET" -> get_accounts
-      | "POST" -> write_accounts
+      | "POST" -> login
+      | "DELETE" -> not_implemented
       | _ -> error_response "Method Not Supported"
     end
-  else if uri = (base_uri ^ "/account/") then 
+  else if uri = (base_uri ^ "/account/signup/") then 
     begin match meth with 
-      | "POST" -> add_account
-      | "DELETE" -> not_implemented
+      | "POST" -> signup
+      (* | "DELETE" -> not_implemented *)
       | _ -> error_response "Method Not Supported"
     end
   else if Str.string_match account_balance_regex 
@@ -172,13 +192,7 @@ let appropriate_method uri meth =
     *)
   else if uri = (base_uri ^ "/engine/") then
     begin match meth with 
-      | "GET" -> get_engine
-      | "POST" -> write_engine
-      | _ -> error_response "Method Not Supported"
-    end
-  else if uri = (base_uri ^ "/orders/") then
-    begin match meth with 
-      | "POST" -> add_order
+      | "POST" -> execute_order
       | _ -> error_response "Method Not Supported"
     end
   else error_response "404 Route Not Found"
