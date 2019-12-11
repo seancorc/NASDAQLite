@@ -122,6 +122,7 @@ module MatchingEngine : MatchingEngine = struct
     | [] -> ()
     | h :: t -> 
       let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+      let _ = if member me ticker = false then add_asset me ticker else () in
       let buys = h |> to_assoc |> List.assoc "buys" |> to_list in
       populate_orders_for_direction me buys ticker Buy;
       let sells = h |> to_assoc |> List.assoc "sells" |> to_list in

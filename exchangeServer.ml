@@ -303,7 +303,7 @@ module ExchangeServer : ExchangeServer = struct
     with _ ->
       ()
 
-  let run () = ignore (Lwt_main.run server); setup_data_directory ()
+  let run () =  setup_data_directory (); ignore (Lwt_main.run server);
 
 end
 
