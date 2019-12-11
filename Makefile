@@ -1,6 +1,6 @@
 # state accountManager
 
-MODULES=account orderBook matchingEngine accountManager accountManager dao
+MODULES=account orderBook matchingEngine accountManager dao
 OBJECTS=$(MODULES:=.cmo)
 MLS=$(MODULES:=.ml)
 MLIS=$(MODULES:=.mli)
@@ -8,7 +8,7 @@ TEST=test.byte
 MAIN=main.byte
 SERVER=exchangeServer.byte
 OCAMLBUILD=ocamlbuild -use-ocamlfind -plugin-tag 'package(bisect_ppx-ocamlbuild)'
-PKGS=unix,oUnit,str,qcheck,cohttp,cohttp-lwt-unix,thread
+PKGS=unix,oUnit,str,qcheck,cohttp,cohttp-lwt-unix,Yojson,safepass
 
 default: build
 	utop
