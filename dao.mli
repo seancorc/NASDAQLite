@@ -1,4 +1,14 @@
-open AccountManager
+
+
+(** [Ticker_exists] is an exception indicating that the specified ticker already
+    exists *)
+exception Ticker_exists
+
+
+(** [Server_error] is an exception indicating that there was an internal
+    server error *)
+exception Server_error
+
 
 module type Dao = sig 
   (** [get_account_balance username] is the json containing the balance of the

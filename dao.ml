@@ -15,7 +15,8 @@ module type Dao = sig
   val create_asset : string -> unit
 end
 
-exception Server_Error
+exception Server_error
+exception Ticker_exists
 
 module Dao : Dao = struct 
 
@@ -53,7 +54,7 @@ module Dao : Dao = struct
     else if error_type = "username" then
       raise (Invalid_username msg)
     else
-      raise Server_Error 
+      raise Server_error 
 
   let signup_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
@@ -103,7 +104,7 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | _ -> raise Server_Error 
+    | _ -> raise Server_error 
 
   let create_asset ticker = 
     let json_string = "{\"ticker\": \"" ^ ticker  ^ "\" }" in
@@ -117,7 +118,10 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | _ -> raise Server_Error 
+    | false -> 
+      match json |> to_assoc |> List.assoc "error" |> to_string with
+      | "ticker" -> raise  Ticker_exists
+      | _ -> raise Server_error
 
   let delete_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
