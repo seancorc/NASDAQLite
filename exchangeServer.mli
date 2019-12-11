@@ -65,6 +65,14 @@ module type ExchangeServer = sig
       Example2: {"success": false, "error": "Invalid request body"}
   *)
   val delete : string -> string
+
+  (** [create_asset request_body] is the json string which represents a successful
+      creation of the asset data provided in [request_body] or an error 
+      message
+      Example1: {"success": true} 
+      Example2: {"success": false, "error": "Invalid request body"}
+  *)
+  val create_asset : string -> string
 end
 
 (** ExchangeServer is the implmentation of the ExchangeServer signature *)

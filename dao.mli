@@ -43,6 +43,9 @@ module type Dao = sig
       ticker [ticker], amount [amount], and price [price].
       Raises: Server_error if there is an internal issue with the server. *)
   val execute_order : string -> string -> string -> string -> string -> unit
+
+  (**TODO Document *)
+  val create_asset : string -> unit
 end
 
 module Dao : Dao

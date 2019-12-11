@@ -16,6 +16,7 @@ module type MatchingEngine = sig
   val get_account_manager : t -> AccountManager.t
   val set_account_manager : t -> AccountManager.t -> t
   val delete_user : t -> string -> string -> unit
+  val add_asset : t -> string -> unit
 end
 
 exception UnboundTicker
@@ -58,6 +59,9 @@ module MatchingEngine : MatchingEngine = struct
       orderbooks = obs;
       account_manager = am;
     }
+
+  let add_asset me ticker =
+    D.add me.orderbooks ticker OrderBook.empty 
 
   let get_account_manager (me: t) = me.account_manager
 

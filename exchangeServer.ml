@@ -29,6 +29,7 @@ module type ExchangeServer = sig
   val execute_order : string -> string
   val login : string -> string
   val delete : string -> string
+  val create_asset : string -> string
 end
 
 module ExchangeServer : ExchangeServer = struct
@@ -189,6 +190,23 @@ module ExchangeServer : ExchangeServer = struct
     | exception e -> 
       invalid_request_body_error
 
+  let create_asset body =
+    match Yojson.Basic.from_string body with 
+    | ticker_json ->
+      let assoc = to_assoc ticker_json in
+      let ticker = assoc |> List.assoc "ticker" |> to_string in
+      let json_me = Yojson.Basic.from_file 
+          (dirname ^ Filename.dir_sep ^ "engine.json") in
+      let me = MatchingEngine.load_from_json json_me in
+      MatchingEngine.add_asset me ticker;
+      let json_string = MatchingEngine.orderbooks_to_json_string me in
+      let json_me = Yojson.Basic.from_string json_string in
+      Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") 
+        json_me;
+      successful_response
+    | exception e -> 
+      invalid_request_body_error
+
   (** [appropriate_method uri meth] is the function specified by URI 
       [uri] and request method [meth]. *)
   let appropriate_method uri meth =
@@ -209,7 +227,11 @@ module ExchangeServer : ExchangeServer = struct
     else if uri = (base_uri ^ "/account/signup/") then 
       begin match meth with 
         | "POST" -> signup
-        (* | "DELETE" -> not_implemented *)
+        | _ -> error_response "Method Not Supported" ""
+      end
+    else if uri = (base_uri ^ "/engine/asset/") then
+      begin match meth with 
+        | "POST" -> create_asset
         | _ -> error_response "Method Not Supported" ""
       end
     else if Str.string_match account_balance_regex 
@@ -230,9 +252,6 @@ module ExchangeServer : ExchangeServer = struct
         | "GET" -> get_account_positions username
         | _ -> error_response "Method Not Supported" ""
       end
-      (* match username and ticker symbol -> return balance ie. amount
-         and another route for get all positions
-      *)
     else if uri = (base_uri ^ "/engine/") then
       begin match meth with 
         | "POST" -> execute_order
