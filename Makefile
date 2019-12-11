@@ -8,7 +8,7 @@ TEST=test.byte
 MAIN=main.byte
 SERVER=exchangeServer.byte
 OCAMLBUILD=ocamlbuild -use-ocamlfind -plugin-tag 'package(bisect_ppx-ocamlbuild)'
-PKGS=unix,oUnit,str,qcheck,cohttp,cohttp-lwt-unix,Yojson,safepass
+PKGS=unix,oUnit,str,qcheck,cohttp,cohttp-lwt-unix,yojson,safepass
 
 default: build
 	utop

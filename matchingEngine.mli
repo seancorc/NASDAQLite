@@ -1,11 +1,10 @@
 open OrderBook
 
+
 (** [UnboundTicker] is an exception indicating that the specified ticker was 
     invalid *)
 exception UnboundTicker
 
-(** [MatchingEngine] is the signature for the module type that will manage 
-    matching and executing orders. *)
 module type MatchingEngine = sig 
   (** AF: Represents MatchingEngine by storing the Account Manager and a 
       hash map mapping strings to orders in a record. 
@@ -49,6 +48,9 @@ module type MatchingEngine = sig
   (** [get_account_manager me] is the account manager from matching engine 
       [me]. *)
   val get_account_manager : t -> AccountManager.AccountManager.t
+  val set_account_manager : t -> AccountManager.AccountManager.t -> t
+  val delete_user : t -> string -> string -> unit
+  val add_asset : t -> string -> unit
 end
 
 (** [MatchingEngine] is the implementation of the MatchingEngine signature *)

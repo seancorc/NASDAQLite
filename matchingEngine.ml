@@ -15,6 +15,9 @@ module type MatchingEngine = sig
   val get_order_book : t -> string -> OrderBook.t
   val load_from_json : Yojson.Basic.t -> t
   val get_account_manager : t -> AccountManager.t
+  val set_account_manager : t -> AccountManager.t -> t
+  val delete_user : t -> string -> string -> unit
+  val add_asset : t -> string -> unit
 end
 
 (** [UnboundTicker] is an exception indicating that the specified ticker was 
@@ -57,21 +60,18 @@ module MatchingEngine : MatchingEngine = struct
     D.replace obs "MSFT" OrderBook.empty;
     D.replace obs "AMZN" OrderBook.empty;
     D.replace obs "ROKU" OrderBook.empty;
-    try 
-      let json = Dao.get_account_data () in
-      let am = AccountManager.load_from_json json in 
-      {
-        orderbooks = obs;
-        account_manager = am;
-      }
-    with _ ->
-      let am = AccountManager.create () in 
-      {
-        orderbooks = obs;
-        account_manager = am;
-      }
+    let am = AccountManager.create () in 
+    {
+      orderbooks = obs;
+      account_manager = am;
+    }
+
+  let add_asset me ticker =
+    D.add me.orderbooks ticker OrderBook.empty 
 
   let get_account_manager (me: t) = me.account_manager
+
+  let set_account_manager me am = {orderbooks=me.orderbooks;account_manager=am}
 
   let orderbooks_to_json_string (me : t) = 
     let obs = D.fold (fun ticker ob acc -> 
@@ -138,6 +138,7 @@ module MatchingEngine : MatchingEngine = struct
     | [] -> ()
     | h :: t -> 
       let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+      let _ = if member me ticker = false then add_asset me ticker else () in
       let buys = h |> to_assoc |> List.assoc "buys" |> to_list in
       populate_orders_for_direction me buys ticker Buy;
       let sells = h |> to_assoc |> List.assoc "sells" |> to_list in
@@ -233,4 +234,11 @@ module MatchingEngine : MatchingEngine = struct
       | Sell -> (addr, amount, min_float, Unix.time ())in 
     let _ = execute_regular_order me direction order ticker in 
     ()
+
+  let delete_user me username pass =
+    AccountManager.delete_user me.account_manager username pass;
+    D.filter_map_inplace (fun k v ->
+        Some (OrderBook.delete_user v username)
+      ) me.orderbooks;
+
 end

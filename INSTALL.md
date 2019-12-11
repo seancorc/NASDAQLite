@@ -4,11 +4,28 @@ Install third party libraries:
 Run the following commands to install safepass and yojson:
 ```opam install safepass```  
 ```opam install yojson```
+```opam install cohttp```
 
 
-In order to run the code, enter the following command:
+In order to run the code, you need to first start the server application with
+the command:
+
+```make server```
+
+This will compile the server byte file. Now run the command
+
+```./exchangeServer.byte```
+
+in order to run the server executable. Now you will need to open a new Terminal
+window in order to run the client application. As you enter requests on the 
+client side, you will also be able to observe that these requests and their 
+results are printed on the server application as well.
+
+Now in order to launch the client application, run the following command in 
+your new Terminal window to both compile and launch the executable:
 
 ```make start```
+
 
 Make start will compile the main.ml into main.byte and run it, opening up
 the text based user interface.

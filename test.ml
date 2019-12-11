@@ -223,16 +223,16 @@ module AccountManagerTest2 (AM: AccountManager.AccountManager) = struct
     test_balance "balance" u1 95.;
     test_position "position" u2 "AAPL" 85;
     test_error "delete non user" f_del_inv_user  
-      (InvalidUsername "Username does not exist");
+      (Invalid_username "Username does not exist");
     test_error "delete wrong password" f_del_inv_pass 
-      InvalidPassword;
+      Invalid_password;
     test_error "login non user" f_login_inv_user 
-      (InvalidUsername "Username does not exist");
+      (Invalid_username "Username does not exist");
     test_error "login wrong password" f_login_inv_pass 
-      InvalidPassword;
+      Invalid_password;
     test_login "login user exists" manager "Sean" "password" u2;
     test_error "register used user" f_register_used_user 
-      (InvalidUsername "Username is taken")
+      (Invalid_username "Username is taken")
   ]
 end
 

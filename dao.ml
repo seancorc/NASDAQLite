@@ -6,27 +6,18 @@ open Bcrypt
 open AccountManager
 
 module type Dao = sig 
-  val get_account_data : unit -> Yojson.Basic.t
   val get_account_balance : string -> Yojson.Basic.t
   val get_account_positions : string -> Yojson.Basic.t
   val signup_user : string -> string -> unit
   val login_user : string -> string -> unit
+  val delete_user : string -> string -> unit
   val execute_order : string -> string -> string -> string -> string -> unit
+  val create_asset : string -> unit
 end
 
 exception Server_Error
 
 module Dao : Dao = struct 
-
-  let get_account_data () = 
-    let body =
-      Client.get 
-        (Uri.of_string "http://localhost:8000/accounts/") >>= fun (resp, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
-      Yojson.Basic.from_string body 
-    in         
-    let json = Lwt_main.run body in
-    json
 
   let get_account_balance username = 
     let body =
@@ -49,6 +40,17 @@ module Dao : Dao = struct
     json
 
 
+  let handle_credentials_error json = 
+    let assoc = json |> to_assoc in
+    let error_type =  assoc |> List.assoc "error" |> to_string in
+    let msg = assoc |> List.assoc "message" |> to_string in
+    if error_type = "password" then 
+      raise Invalid_password
+    else if error_type = "username" then
+      raise (Invalid_username msg)
+    else
+      raise Server_Error 
+
   let signup_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
     \"pass\":\"" ^ pass ^ "\"}" in
@@ -62,14 +64,7 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | false -> 
-      let error_type = json |> to_assoc |> List.assoc "error" |> to_string in
-      if error_type = "password" then 
-        raise InvalidPassword
-      else if error_type = "username" then
-        raise (InvalidUsername "Username is taken")
-      else
-        raise Server_Error 
+    | false -> handle_credentials_error json
 
   let login_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
@@ -84,22 +79,15 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | false -> 
-      let error_type = json |> to_assoc |> List.assoc "error" |> to_string in
-      if error_type = "password" then 
-        raise InvalidPassword
-      else if error_type = "username" then
-        raise (InvalidUsername "Username does not exist")
-      else
-        raise Server_Error 
+    | false -> handle_credentials_error json
 
   let execute_order username dir ticker amount price = 
     let json_string = "{\n\"username\":\""^ username ^"\",
     \"amount\":"^ amount ^",
     \"direction\":\""^ dir ^"\",
-    \"price\":"^ price ^",
+    \"price\":"^ price ^"0,
     \"time\":"^ string_of_float (Unix.time ()) ^ "0," ^ "
-    \"ticker\":"^ ticker ^",
+    \"ticker\":\""^ ticker ^"\"
     }" in 
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
@@ -111,26 +99,35 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | _ -> raise Server_Error    
+    | _ -> raise Server_Error 
 
-
-  let add_order ticker direction username amt price =
-    let order = "{\n\"username\":\""^ username ^"\",
-    \n\"amount\":"^ amt ^",
-    \n\"price\":"^ price ^",
-    \n\"time\":"^ string_of_float (Unix.time ()) ^ "0" ^ "}" in
-    let json_string = "{\n\"ticker\":\"" ^ ticker ^ "\",\n 
-    \"direction\":\"" ^ direction ^ "\",\n\"order\": "^ order ^ "\n}" in
+  let create_asset ticker = 
+    let json_string = "{\"ticker\": \"" ^ ticker  ^ "\" }" in
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.post ~body:post_body 
-        (Uri.of_string "http://localhost:8000/engine/") >>= fun (resp, body) ->
+        (Uri.of_string "http://localhost:8000/engine/asset/") >>= fun (resp, body) ->
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | _ -> raise Server_Error    
+    | _ -> raise Server_Error 
+
+  let delete_user username pass = 
+    let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
+    \"pass\":\"" ^ pass ^ "\"}" in
+    let post_body = Cohttp_lwt.Body.of_string json_string in
+    let body =
+      Client.delete ~body:post_body 
+        (Uri.of_string "http://localhost:8000/account/delete/") >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    match json |> to_assoc |> List.assoc "success" |> to_bool with
+    | true -> ()
+    | false -> handle_credentials_error json
 
 end
