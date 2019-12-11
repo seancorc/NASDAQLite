@@ -3,9 +3,10 @@ open Account
 open OrderBook
 open MatchingEngine
 open Dao
+open Yojson.Basic.Util
 
 
-type state = {current_account: Account.t option; account_manager : AccountManager.t; matching_engine: MatchingEngine.t}
+type state = {username: string option}
 
 type action = Login | Signup 
 
@@ -45,14 +46,17 @@ let login (s : state) : state =
   print_string "Password: ";
   let password = (read_line ()) in
   try 
-    let account = AccountManager.login (s.account_manager) username password in 
-    {s with current_account =  Some account}
+    let _ = Dao.login_user username password in
+    {username=Some username}
   with 
   | InvalidPassword ->
-    let _ =  print_endline "Incorrect Password" in 
+    print_endline "Incorrect password";
     s
   | (InvalidUsername a) -> 
-    let _ = print_endline a in 
+    print_endline a;
+    s
+  | _ -> 
+    print_endline "There was a server error, please try again.";
     s
 
 (** [register s] prompts the user to register a newaccount with a new username
@@ -62,11 +66,20 @@ let register (s : state) : state =
   let username = String.trim(read_line ()) in 
   print_string "Password: ";
   let password = (read_line ()) in 
-  let _ = Dao.signup_user username password in
-  let new_account = AccountManager.register (s.account_manager) username 
-      password in 
-  let s = {s with current_account = (Some new_account)} in 
-  s
+  try 
+    let _ = Dao.signup_user username password in
+    let new_s = {username=Some username} in 
+    new_s  
+  with 
+  | InvalidPassword ->
+    print_endline "Incorrect password";
+    s
+  | (InvalidUsername a) -> 
+    print_endline a;
+    s
+  | _ -> 
+    print_endline "There was a server error, please try again.";
+    s
 
 (** [restart s] prompts the user to register a newaccount with a new username
     and password. *)
@@ -88,40 +101,50 @@ let parse_order (usr: string) (lst: string list) : (string * submitted_order) op
     end
   with exn -> None
 
-let prompt_user_input (user: Account.t): string = 
-  print_newline (); print_endline ("Account: " ^ Account.username user); 
-  let balances = Account.positions user in 
-  let usd_balance = Account.balance user in 
-  let balances = ("USD", (int_of_float usd_balance)) :: balances in 
+let prompt_user_input username = 
+  let usd_balance_json = Dao.get_account_balance username in 
+  let assoc_list = usd_balance_json |> to_assoc in 
+  let usd_balance = assoc_list |> List.assoc "data" |> to_float in 
+  let positions_json = Dao.get_account_positions username in
+  let assoc_list = positions_json |> to_assoc in
+  let json_positions = assoc_list |> List.assoc "data" |> to_list in 
+  let positions = List.fold_left (fun acc pos -> 
+      let assoc = pos |> to_assoc in
+      let ticker = assoc |> List.assoc "ticker" |> to_string in 
+      let amount = assoc |> List.assoc "amount" |> to_int in
+      (ticker,amount) :: acc) [] json_positions  in
+  let balances = ("USD", (int_of_float usd_balance)) :: positions in 
   let _ = print_balances balances in 
   print_endline "To log out of this account, type 'logout' and to save&exit type 'quit'";
   print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, order size, price (only for Buy or Sell)";
   read_line ()
 
-let read_input s user input am me = 
+let string_of_dir = function
+  | Buy -> "buy"
+  | Sell -> "sell"
+
+let read_input s username input = 
   match String.trim input with 
   | "logout" -> 
-    {s with current_account = None}
+    {username = None}
   | "quit" ->
-    let am_json_string = AccountManager.to_json_string s.account_manager in
-    let me_json_string = MatchingEngine.orderbooks_to_json_string s.matching_engine in 
-    Dao.write_account_manager_data am_json_string;
-    Dao.write_engine_data  me_json_string;
     Stdlib.exit 0;
   | a -> 
     begin 
       (* Buy/Sell ticker amount price *)
       let lst = String.split_on_char ',' a in 
       let lst' = List.map (String.trim) lst in
-      let parsed_order = parse_order (Account.username user) lst' in 
+      let parsed_order = parse_order username lst' in 
       match parsed_order with 
       | None -> print_endline "Invalid order"; s
-      | Some (ticker, submitted_order) ->
+      | Some (ticker, (dir, (username, amount, price, time))) ->
         begin
-          let tickers = MatchingEngine.tickers s.matching_engine in 
-          if not (List.mem ticker tickers) then (print_endline "Invalid order"; s) else
-            let dir, order = submitted_order in 
-            let _ = MatchingEngine.execute_regular_order s.matching_engine dir order ticker in 
+          try 
+            Dao.execute_order username (string_of_dir dir) ticker 
+              (string_of_int amount) (string_of_float price);
+            s
+          with e -> 
+            print_endline "There was a server error, please try again.";
             s
         end
     end
@@ -129,45 +152,16 @@ let read_input s user input am me =
 (** [repl s] is the main terminal of the system. It prints the account name,
     balances, and prompts the user to either log out or input an order. *)
 let rec repl (s: state) : unit = 
-  let st = match s.current_account with 
+  let st = match s.username with 
     | None -> restart s
-    | Some user -> 
+    | Some username -> 
       begin
-        let input = prompt_user_input user in 
-        let updated_state = read_input s user input s.account_manager s.matching_engine in 
+        let input = prompt_user_input username in 
+        let updated_state = read_input s username input in 
         updated_state
       end in 
   repl st
 
-let rec create_default_tickers dt =
-  match dt with 
-  | [] -> []
-  | h :: t -> `Assoc[("ticker", `String h);("buys",`List[]);("sells",`List[])] ::
-              (create_default_tickers t)
-
-
 
 let inital_state () =
-  try 
-    let engine_json = Dao.get_engine_data () in
-    let me = MatchingEngine.load_from_json engine_json in  
-    let am = MatchingEngine.get_account_manager me in 
-    {current_account = None ; account_manager = am; matching_engine = me}
-  with e ->
-    let dirname = "data" in
-    let accounts_file_name = "accounts.json" in
-    let engine_file_name = "engine.json" in
-    Unix.mkdir dirname 0o775;
-    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
-    let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ engine_file_name) in
-    let starting_accounts_json = `Assoc["users", `List []] in 
-    let default_tickers = create_default_tickers 
-        ["GOOG"; "MSFT"; "AAPL"; "ROKU"; "AMZN"] in
-    let starting_engine_json = `Assoc["tickers", `List default_tickers] in 
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ accounts_file_name) 
-      starting_accounts_json;
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ engine_file_name) 
-      starting_engine_json;
-    let me = MatchingEngine.create () in 
-    let am = MatchingEngine.get_account_manager me in 
-    {current_account = None ; account_manager = am; matching_engine = me}
+  {username = None}
