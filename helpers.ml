@@ -69,8 +69,15 @@ let register (s : state) : state =
   try 
     let _ = Dao.signup_user username password in
     let new_s = {username=Some username} in 
-    new_s
-  with e ->
+    new_s  
+  with 
+  | InvalidPassword ->
+    print_endline "Incorrect password";
+    s
+  | (InvalidUsername a) -> 
+    print_endline a;
+    s
+  | _ -> 
     print_endline "There was a server error, please try again.";
     s
 

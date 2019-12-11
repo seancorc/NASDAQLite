@@ -50,10 +50,8 @@ module Dao : Dao = struct
 
 
   let signup_user username pass = 
-    let hashed_pass = Bcrypt.string_of_hash (Bcrypt.hash pass) in
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
-    \"hashed_pass\":\"" ^ hashed_pass ^ "\",\n\"balance\": 0.0,\n  
-    \"orders\": []\n}" in
+    \"pass\":\"" ^ pass ^ "\"}" in
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.post ~body:post_body 
@@ -64,7 +62,14 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | _ -> raise Server_Error
+    | false -> 
+      let error_type = json |> to_assoc |> List.assoc "error" |> to_string in
+      if error_type = "password" then 
+        raise InvalidPassword
+      else if error_type = "username" then
+        raise (InvalidUsername "Username is taken")
+      else
+        raise Server_Error 
 
   let login_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 

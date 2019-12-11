@@ -9,8 +9,9 @@ open OrderBook
 
 let dirname = "data"
 let successful_response = "{\"success\": true}"
-let invalid_request_body_error = "{\"error\": \"Invalid request body\"}"
-let error_response err _ = "{\"error\": \"" ^ err ^ "\"}" 
+let invalid_request_body_error = "{\"success\": false, 
+                                  \"error\": \"Invalid request body\"}"
+let error_response err _ = "{\"success\": false, \"error\": \"" ^ err ^ "\"}" 
 exception Ticker_Not_Found
 exception Invalid_Direction
 exception Parse_Error
@@ -48,13 +49,23 @@ let get_account_positions username _ =
 
 let signup body =
   match Yojson.Basic.from_string body with 
-  | new_user ->
-    let json = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
-    let users = json |> to_assoc |> List.assoc "users" |> to_list in
-    let new_users = `Assoc["users", `List (new_user :: users)] in
-    Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") new_users;
-    successful_response
-  | exception e -> 
+  | credentials ->
+    let json_am = Yojson.Basic.from_file (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let am = AccountManager.load_from_json json_am in 
+    let assoc = to_assoc credentials in
+    let username = assoc |> List.assoc "username" |> to_string in
+    let pass = assoc |> List.assoc "pass" |> to_string in
+    begin try 
+        let _ = AccountManager.register am username pass in
+        let json_string = AccountManager.to_json_string am in
+        let json_am = Yojson.Basic.from_string json_string in
+        Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") json_am;
+        successful_response
+      with 
+      | InvalidPassword -> error_response "password" ()
+      | InvalidUsername a -> error_response "username" ()
+    end
+  | exception e ->
     invalid_request_body_error
 
 
@@ -84,7 +95,6 @@ let update_ticker_json tj direction order : Yojson.Basic.t =
                                                         `List (order :: sells)] 
   else 
     raise Invalid_Direction 
-
 
 let to_direction = function
   | "buy" -> Buy
@@ -121,13 +131,17 @@ let login body =
     let assoc = to_assoc credentials in
     let username = assoc |> List.assoc "username" |> to_string in
     let pass = assoc |> List.assoc "pass" |> to_string in
-    try 
-      let _ = AccountManager.login am username pass in
-      successful_response
-    with 
-    | InvalidPassword -> error_response "password" ()
-    | InvalidUsername a -> error_response "username" ()
-    | _ -> error_response "login unsuccessful" ()
+    begin try 
+        let _ = AccountManager.login am username pass in
+        successful_response
+      with 
+      | InvalidPassword -> error_response "password" ()
+      | InvalidUsername a -> error_response "username" ()
+      | _ -> error_response "login unsuccessful" ()
+    end
+  | exception e -> 
+    invalid_request_body_error
+
 
 let add_order body = 
   match Yojson.Basic.from_string body with 
