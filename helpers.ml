@@ -10,8 +10,8 @@ type state = {username: string option}
 
 type action = Login | Signup | Delete
 
-(** [start_loop] is the eithier the Login or Signup action depending on the 
-    user's input. *)
+(** [start_loop] prompts the user to sign in and returns  either 
+    [Login] or [Signup] depending on the user's input. *)
 let rec start_loop () = 
   print_endline ("Type 'login' to login, 'signup' to signup, or 'delete' to \
                   delete an account (type 'quit' to exit)");
@@ -23,12 +23,15 @@ let rec start_loop () =
   | _ -> print_endline "\n**I couldn't understand that command, please try again.**"; 
     start_loop ()
 
-(** [startup_action] prints the welcome message and prompts [start_loop]. *)
+(** [startup_action] prints the welcome message and prompts [start_loop]
+    so it goes in a loop until returning either [Login] or [Signup] once the 
+    user submits a valid desired action. *)
 let startup_action () = 
   print_endline ("Welcome to NASDAQLite!"); 
   start_loop ()
 
-(** [print_balances b] prints each balance in the balance list [b]. *)
+(** [print_balances b] Returns unit after printing each balance in the 
+    list of balances [b]. *)
 let print_balances b = 
   let _ = print_string "Balances: [" in 
   let _ = List.iter (fun a -> 
@@ -62,8 +65,8 @@ let login (s : state) : state =
     print_endline "\n**There was a server error, please try again.**";
     s
 
-(** [register s] prompts the user to register a newaccount with a new username
-    and password. *)
+(** [register s] prompts the user to register a new account with a new username
+    and password and returns the updated state [s] *)
 let register (s : state) : state = 
   print_string "Username: ";
   let username = String.trim(read_line ()) in 
@@ -106,14 +109,18 @@ let delete (s : state) : state =
     print_endline "\n**There was a server error, please try again.**";
     s
 
-(** [restart s] prompts the user to register a newaccount with a new username
-    and password. *)
+(** [restart s] Returns updated state [s] after restarting current state with a 
+    new login by running the start loop and then running either log or register 
+    on the newer state and returning the result *)
 let restart (s : state) : state  = 
   match start_loop () with 
   | Login -> login s
   | Signup -> register s
   | Delete -> delete s
 
+(** [parse_order usr lst] Returns None if [lst] represents an invalid order or
+    [Some (t, so)] where [t] is the ticker of the order and [so] is the 
+    submitted order. *)
 let parse_order (usr: string) (lst: string list) : (string * submitted_order) option = 
   try
     begin
@@ -127,6 +134,9 @@ let parse_order (usr: string) (lst: string list) : (string * submitted_order) op
     end
   with exn -> None
 
+(** [prompt_user_input username] Returns [s] where s is the user input
+    submitted in the text UI after prompting the user to input a valid 
+    action. *)
 let prompt_user_input username = 
   let usd_balance_json = Dao.get_account_balance username in 
   let assoc_list = usd_balance_json |> to_assoc in 
@@ -147,10 +157,16 @@ let prompt_user_input username =
                  Sell Market), ticker, order size, price (only for Buy or Sell)";
   String.lowercase_ascii (read_line ())
 
+
+(** [string_of_dir d] is the string representing direction [d], which is 
+    either ['buy'] or ['sell'] *)
 let string_of_dir = function
   | Buy -> "buy"
   | Sell -> "sell"
 
+(** [read_input s username input] returns [s] after updating it by parsing
+    the [input] from the user given by username: [username] and executing
+    the commanded action *)
 let read_input s username input = 
   match String.trim input with 
   | "logout" -> 
@@ -189,7 +205,8 @@ let read_input s username input =
         end
     end
 
-(** [repl s] is the main terminal of the system. It prints the account name,
+(** [repl s] Returns unit and executes an infinite read-eval-print-loop
+    to interact with the user and . It prints the account name,
     balances, and prompts the user to either log out or input an order. *)
 let rec repl (s: state) : unit = 
   let st = match s.username with 
@@ -203,5 +220,6 @@ let rec repl (s: state) : unit =
   repl st
 
 
+(** [initial_state] Returns a new start state *)
 let inital_state () =
   {username = None}
