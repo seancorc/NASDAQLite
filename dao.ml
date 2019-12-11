@@ -10,6 +10,7 @@ module type Dao = sig
   val get_account_positions : string -> Yojson.Basic.t
   val signup_user : string -> string -> unit
   val login_user : string -> string -> unit
+  val delete_user : string -> string -> unit
   val execute_order : string -> string -> string -> string -> string -> unit
 end
 
@@ -98,5 +99,20 @@ module Dao : Dao = struct
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
     | _ -> raise Server_Error    
+
+  let delete_user username pass = 
+    let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
+    \"pass\":\"" ^ pass ^ "\"}" in
+    let post_body = Cohttp_lwt.Body.of_string json_string in
+    let body =
+      Client.delete ~body:post_body 
+        (Uri.of_string "http://localhost:8000/account/delete/") >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    match json |> to_assoc |> List.assoc "success" |> to_bool with
+    | true -> ()
+    | false -> handle_credentials_error json
 
 end

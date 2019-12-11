@@ -5,6 +5,7 @@ module type Dao = sig
   val get_account_positions : string -> Yojson.Basic.t
   val signup_user : string -> string -> unit
   val login_user : string -> string -> unit
+  val delete_user : string -> string -> unit
   val execute_order : string -> string -> string -> string -> string -> unit
 end
 

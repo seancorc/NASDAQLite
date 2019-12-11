@@ -156,6 +156,30 @@ let login body =
   | exception e -> 
     invalid_request_body_error
 
+let delete body = 
+  match Yojson.Basic.from_string body with 
+  | credentials -> 
+    let json_am = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let am = AccountManager.load_from_json json_am in 
+    let assoc = to_assoc credentials in
+    let username = assoc |> List.assoc "username" |> to_string in
+    let pass = assoc |> List.assoc "pass" |> to_string in
+    begin try 
+        let _ = AccountManager.delete_user am username pass in
+        let json_string = AccountManager.to_json_string am in
+        let json_am = Yojson.Basic.from_string json_string in
+        Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") 
+          json_am;
+        successful_response
+      with 
+      | Invalid_username a -> error_response "username" a ()
+      | Invalid_password -> error_response "password" "" ()
+      | _ -> error_response "login unsuccessful" "" ()
+    end
+  | exception e -> 
+    invalid_request_body_error
+
 
 let _ = Cohttp_lwt_unix__.Debug.activate_debug () 
 let base_uri = "//localhost:8000"
@@ -173,7 +197,11 @@ let appropriate_method uri meth =
   else if uri = (base_uri ^ "/account/login/") then 
     begin match meth with 
       | "POST" -> login
-      | "DELETE" -> error_response "Not yet implemented" ""
+      | _ -> error_response "Method Not Supported" ""
+    end
+  else if uri = (base_uri ^ "/account/delete/") then
+    begin match meth with
+      | "DELETE" -> delete
       | _ -> error_response "Method Not Supported" ""
     end
   else if uri = (base_uri ^ "/account/signup/") then 

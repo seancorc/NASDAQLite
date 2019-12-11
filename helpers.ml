@@ -8,15 +8,17 @@ open Yojson.Basic.Util
 
 type state = {username: string option}
 
-type action = Login | Signup 
+type action = Login | Signup | Delete
 
 (** [start_loop] is the eithier the Login or Signup action depending on the 
     user's input. *)
 let rec start_loop () = 
-  print_endline ("Type 'login' to login or 'signup' to signup");
+  print_endline ("Type 'login' to login, 'signup' to signup, or 'delete' to \
+                  delete an account");
   match String.trim(read_line ()) with
   | "login" -> Login
   | "signup" -> Signup
+  | "delete" -> Delete
   | _ -> print_endline "I couldn't understand that command, please try again."; 
     start_loop ()
 
@@ -81,12 +83,35 @@ let register (s : state) : state =
     print_endline "There was a server error, please try again.";
     s
 
+(** [delete s] prompts the user to delete an account with a username
+    and password. *)
+let delete (s : state) : state = 
+  print_string "Username: ";
+  let username = String.trim(read_line ()) in 
+  print_string "Password: ";
+  let password = (read_line ()) in 
+  try 
+    let _ = Dao.delete_user username password in
+    print_endline "Account deleted";
+    s
+  with 
+  | Invalid_password ->
+    print_endline "Incorrect password";
+    s
+  | (Invalid_username a) -> 
+    print_endline a;
+    s
+  | _ -> 
+    print_endline "There was a server error, please try again.";
+    s
+
 (** [restart s] prompts the user to register a newaccount with a new username
     and password. *)
 let restart (s : state) : state  = 
   match start_loop () with 
   | Login -> login s
   | Signup -> register s
+  | Delete -> delete s
 
 let parse_order (usr: string) (lst: string list) : (string * submitted_order) option = 
   try
@@ -115,7 +140,7 @@ let prompt_user_input username =
       (ticker,amount) :: acc) [] json_positions  in
   let balances = ("USD", (int_of_float usd_balance)) :: positions in 
   let _ = print_balances balances in 
-  print_endline "To log out of this account, type 'logout' and to save&exit type 'quit'";
+  print_endline "To log out of this account, type 'logout' and to exit type 'quit'";
   print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, order size, price (only for Buy or Sell)";
   read_line ()
 

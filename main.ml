@@ -10,7 +10,8 @@ let main () : unit =
   let s = inital_state () in 
   let state = match startup_action () with 
     | Login -> login s
-    | Signup -> register s in 
+    | Signup -> register s 
+    | Delete -> delete s in
   repl state
 
 let () = main ()
