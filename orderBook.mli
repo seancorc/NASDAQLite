@@ -78,6 +78,8 @@ module type OrderBook = sig
       [construct_tx ob] is None if no transactions are necessary. *)
   val construct_tx : t -> transaction option * t
 
+  (** [delete_user ob name] if orderbook [ob] with the user with username [name] 
+      removed. *)
   val delete_user : t -> string -> t
 end
 

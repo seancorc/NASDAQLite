@@ -19,10 +19,13 @@ exception Server_Error
 
 module Dao : Dao = struct 
 
+  (*BISECT-IGNORE-BEGIN*)
+
   let get_account_balance username = 
     let body =
       Client.get 
-        (Uri.of_string ("http://localhost:8000/account/balance/" ^ username ^ "/")) >>= fun (resp, body) ->
+        (Uri.of_string ("http://localhost:8000/account/balance/" ^ username 
+                        ^ "/")) >>= fun (resp, body) ->
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
@@ -32,7 +35,8 @@ module Dao : Dao = struct
   let get_account_positions username = 
     let body =
       Client.get 
-        (Uri.of_string ("http://localhost:8000/account/positions/" ^ username ^ "/")) >>= fun (resp, body) ->
+        (Uri.of_string ("http://localhost:8000/account/positions/" 
+                        ^ username ^ "/")) >>= fun (resp, body) ->
       body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
@@ -57,8 +61,8 @@ module Dao : Dao = struct
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.post ~body:post_body 
-        (Uri.of_string "http://localhost:8000/account/signup/") >>= fun (resp, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+        (Uri.of_string "http://localhost:8000/account/signup/") >>= 
+      fun (resp, body) -> body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
     let json = Lwt_main.run body in
@@ -72,8 +76,8 @@ module Dao : Dao = struct
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.post ~body:post_body 
-        (Uri.of_string "http://localhost:8000/account/login/") >>= fun (resp, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+        (Uri.of_string "http://localhost:8000/account/login/") >>= 
+      fun (resp, body) -> body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
     let json = Lwt_main.run body in
@@ -106,8 +110,8 @@ module Dao : Dao = struct
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.post ~body:post_body 
-        (Uri.of_string "http://localhost:8000/engine/asset/") >>= fun (resp, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+        (Uri.of_string "http://localhost:8000/engine/asset/") >>= 
+      fun (resp, body) -> body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
     let json = Lwt_main.run body in
@@ -121,13 +125,15 @@ module Dao : Dao = struct
     let post_body = Cohttp_lwt.Body.of_string json_string in
     let body =
       Client.delete ~body:post_body 
-        (Uri.of_string "http://localhost:8000/account/delete/") >>= fun (resp, body) ->
-      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+        (Uri.of_string "http://localhost:8000/account/delete/") >>= 
+      fun (resp, body) -> body |> Cohttp_lwt.Body.to_string >|= fun body ->
       Yojson.Basic.from_string body 
     in         
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
     | false -> handle_credentials_error json
+
+  (*BISECT-IGNORE-END*)
 
 end

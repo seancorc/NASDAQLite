@@ -37,8 +37,8 @@ module ExchangeServer : ExchangeServer = struct
   (** [find_user username user] is the bool representing whether [username]
       is equal to the username represented by the json object [user] *)
   let find_user username user = 
-    let other_username = user |> to_assoc |> List.assoc "username" |> to_string in 
-    username = other_username
+    let other_username = user |> to_assoc |> List.assoc "username" |> to_string 
+    in username = other_username
 
   let get_account_balance username _ =
     let json = Yojson.Basic.from_file 
@@ -94,9 +94,9 @@ module ExchangeServer : ExchangeServer = struct
     | exception e ->
       invalid_request_body_error
 
-  (** [to_direction s} is the OrderBook.order_direction represented by the 
+  (** [to_direction s] is the OrderBook.order_direction represented by the 
       string [s]. 
-      Raises: Invalid_direction if [s] is not a valid direction*)
+      Raises: Invalid_direction if [s] is not a valid direction. *)
   let to_direction = function
     | "buy" -> Buy
     | "sell" -> Sell 
@@ -289,9 +289,9 @@ module ExchangeServer : ExchangeServer = struct
       let accounts_file_name = "accounts.json" in
       let engine_file_name = "engine.json" in
       Unix.mkdir dirname 0o775;
-      let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) in
-      let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ engine_file_name) in
-      let starting_accounts_json = `Assoc["users", `List []] in 
+      let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ accounts_file_name) 
+      in let _ = Stdlib.open_out (dirname ^ Filename.dir_sep ^ engine_file_name) 
+      in let starting_accounts_json = `Assoc["users", `List []] in 
       let default_tickers = create_default_tickers 
           ["GOOG"; "MSFT"; "AAPL"; "ROKU"; "AMZN"] in
       let starting_engine_json = `Assoc["tickers", `List default_tickers] in 

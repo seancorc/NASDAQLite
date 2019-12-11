@@ -48,8 +48,23 @@ module type MatchingEngine = sig
   (** [get_account_manager me] is the account manager from matching engine 
       [me]. *)
   val get_account_manager : t -> AccountManager.AccountManager.t
+
+  (** [set_account_manager me am] is the matching engine [me] with account
+      manager [am] as the account manager. *)
   val set_account_manager : t -> AccountManager.AccountManager.t -> t
+
+  (** [delete_user me name pass] deletes the user in matching engine [me] with 
+      username [name] and password [pass].
+      Raises: 
+      -   Invalid_username if string [name] is not a username 
+          in orderbook [ob].
+      -   Invalid_password is the string [pass] is not the password for the
+          account with username [name].
+  *)
   val delete_user : t -> string -> string -> unit
+
+  (** [add_asset me ticker] adds string ticker [ticker] as an available ticker 
+      in matching engine [me]. *)
   val add_asset : t -> string -> unit
 end
 

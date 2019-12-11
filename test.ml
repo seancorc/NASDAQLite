@@ -11,11 +11,11 @@
     order for the entire system to work together. They do not depend on the 
     server and therefore are more easily and accurately tested than other 
     modules discussed later. These modules handle orders, accounts, and 
-    matching, which is essentially the “back end” of our stock exchange. The 
+    matching, which makes our stock exchange work. The 
     clients cannot see these things taking place, but their correctness is 
     essential for our system to accurately work for its intended purpose. So, 
     by testing these through OUnit using test driven development and getting 
-    maximal code coverage, we know that the “back end” calculations of our stock 
+    maximal code coverage, we know that the core calculations of our stock 
     exchange are carried out correctly.
 
     The four modules being manually tested are dao.ml, helpers.ml, 
@@ -29,14 +29,14 @@
     ensure that the user can successfully access and use our system. 
 
     This testing approach demonstrates the correctness of our system in two 
-    ways. First, we know that in the back end, the calculations, orders, and 
+    ways. First, we know that in the our core, the calculations, orders, and 
     accounts are being handled correctly due to our OUnit tests covering over 
     90% of the code in the four modules tested using these methods. In other 
-    words, our system has the functionality on the back end of an actual stock 
+    words, our system has the functionality of an actual stock 
     exchange. Second, our UI and server have been specifically manually tested 
     to account for each situation we can think of and that our code covers. 
     This ensures that users will be able to smoothly and successfully use and 
-    access the functionality that was correctly implemented on the back end. 
+    access the functionality that was correctly implemented. 
     With these two methods combined, we ensure that our system runs correctly.
 *)
 

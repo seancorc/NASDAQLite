@@ -73,10 +73,10 @@ module type AccountManager = sig
   val set_account_position : t -> string -> string -> int -> unit
 
   (** [set_account_position am username ticker amount] adds [amount] to the 
-      number of positions of the account that belongs to AccountManager [am] with 
-        username [username] for ticker [ticker].
-        Raises: Not_found if there does not exist an account with username 
-        [username] in AccountManager [am] *)
+      number of positions of the account that belongs to AccountManager [am] 
+      with username [username] for ticker [ticker].
+      Raises: Not_found if there does not exist an account with username 
+              [username] in AccountManager [am] *)
   val inc_account_position : t -> string -> string -> int -> unit
 
   (** [set_account_position am username ticker amount] subtracts [amount] from 
