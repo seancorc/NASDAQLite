@@ -66,6 +66,8 @@ module type OrderBook = sig
   (** [construct_tx ob] constructs a transaction from orderbook [ob]. 
       [construct_tx ob] is None if no transactions are necessary. *)
   val construct_tx : t -> transaction option * t
+
+  val delete_user : t -> string -> t
 end
 
 module OrderBook : OrderBook

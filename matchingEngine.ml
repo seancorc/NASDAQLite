@@ -15,6 +15,7 @@ module type MatchingEngine = sig
   val load_from_json : Yojson.Basic.t -> t
   val get_account_manager : t -> AccountManager.t
   val set_account_manager : t -> AccountManager.t -> t
+  val delete_user : t -> string -> string -> unit
 end
 
 exception UnboundTicker
@@ -195,4 +196,11 @@ module MatchingEngine : MatchingEngine = struct
       | Sell -> (addr, amount, min_float, Unix.time ())in 
     let _ = execute_regular_order me direction order ticker in 
     ()
+
+  let delete_user me username pass =
+    AccountManager.delete_user me.account_manager username pass;
+    D.filter_map_inplace (fun k v ->
+        Some (OrderBook.delete_user v username)
+      ) me.orderbooks;
+
 end

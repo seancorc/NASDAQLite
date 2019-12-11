@@ -19,12 +19,6 @@ exception Ticker_not_found
 exception Invalid_direction
 
 
-let get_accounts _ =
-  match Yojson.Basic.from_file 
-          ("data" ^ Filename.dir_sep ^ "accounts.json") with 
-  | v -> Yojson.Basic.pretty_to_string v
-  | exception e -> "Error Parsing File"
-
 let find_user username user = 
   let other_username = user |> to_assoc |> List.assoc "username" |> to_string in 
   username = other_username
@@ -159,15 +153,24 @@ let login body =
 let delete body = 
   match Yojson.Basic.from_string body with 
   | credentials -> 
+    let json_me = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "engine.json") in
+    let me = MatchingEngine.load_from_json json_me in
     let json_am = Yojson.Basic.from_file 
         (dirname ^ Filename.dir_sep ^ "accounts.json") in
-    let am = AccountManager.load_from_json json_am in 
+    let am = AccountManager.load_from_json json_am in
+    let new_me = MatchingEngine.set_account_manager me am in
     let assoc = to_assoc credentials in
     let username = assoc |> List.assoc "username" |> to_string in
     let pass = assoc |> List.assoc "pass" |> to_string in
     begin try 
-        let _ = AccountManager.delete_user am username pass in
-        let json_string = AccountManager.to_json_string am in
+        let _ = MatchingEngine.delete_user new_me username pass in
+        let json_string = MatchingEngine.orderbooks_to_json_string new_me in
+        let json_me = Yojson.Basic.from_string json_string in
+        Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") 
+          json_me;
+        let updated_am = MatchingEngine.get_account_manager new_me in
+        let json_string = AccountManager.to_json_string updated_am in
         let json_am = Yojson.Basic.from_string json_string in
         Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") 
           json_am;
@@ -189,12 +192,7 @@ let appropriate_method uri meth =
     Str.regexp "\\/\\/localhost:8000\\/account\\/balance\\/" in
   let account_positions_regex = 
     Str.regexp "\\/\\/localhost:8000\\/account\\/positions\\/" in
-  if uri = (base_uri ^ "/accounts/") then 
-    begin match meth with
-      | "GET" -> get_accounts
-      | _ -> error_response "Method Not Supported" ""
-    end
-  else if uri = (base_uri ^ "/account/login/") then 
+  if uri = (base_uri ^ "/account/login/") then 
     begin match meth with 
       | "POST" -> login
       | _ -> error_response "Method Not Supported" ""

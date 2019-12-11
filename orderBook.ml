@@ -25,7 +25,7 @@ module type OrderBook = sig
   val pop_best_offer : t -> order option * t
   val pop_best_bid : t -> order option * t
   val construct_tx : t -> transaction option * t
-
+  val delete_user : t -> string -> t
 end
 
 module OrderBook : OrderBook = struct 
@@ -157,6 +157,15 @@ module OrderBook : OrderBook = struct
     match b, s with 
     | bh :: bt, sh :: st -> (bt, st)
     | _ -> failwith "Cannot remove tops until at least May"
+
+  let delete_user ((b,s) : t) username : t = 
+    let new_b  = List.filter (fun (u,_,_,_) -> 
+        u <> username
+      ) b in 
+    let new_s = List.filter (fun (u,_,_,_) -> 
+        u <> username
+      ) s in
+    (new_b,new_s)
 
   let construct_tx (ob: t) : (transaction option * t) = 
     let bb = best_bid ob in 
