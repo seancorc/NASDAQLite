@@ -13,6 +13,7 @@ module type MatchingEngine = sig
   val get_order_book : t -> string -> OrderBook.t
   val load_from_json : Yojson.Basic.t -> t  
   val get_account_manager : t -> AccountManager.AccountManager.t
+  val set_account_manager : t -> AccountManager.AccountManager.t -> t
 end
 
 (** [MatchingEngine] is the implementation of the MatchingEngine signature *)

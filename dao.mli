@@ -1,7 +1,6 @@
 open AccountManager
 
 module type Dao = sig 
-  val get_account_data : unit -> Yojson.Basic.t
   val get_account_balance : string -> Yojson.Basic.t
   val get_account_positions : string -> Yojson.Basic.t
   val signup_user : string -> string -> unit

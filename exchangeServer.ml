@@ -107,6 +107,10 @@ let execute_order body =
     let json_me = Yojson.Basic.from_file 
         (dirname ^ Filename.dir_sep ^ "engine.json") in
     let me = MatchingEngine.load_from_json json_me in
+    let json_am = Yojson.Basic.from_file 
+        (dirname ^ Filename.dir_sep ^ "accounts.json") in
+    let am = AccountManager.load_from_json json_am in
+    let new_me = MatchingEngine.set_account_manager me am in
     let assoc = to_assoc json_order in 
     let dir = assoc |> List.assoc "direction" |> to_string |> to_direction in
     let username = assoc |> List.assoc "username" |> to_string in
@@ -118,13 +122,13 @@ let execute_order body =
       (error_response "Invalid Ticker" "" ()) 
     else
       let order = (username, amount, price, Unix.time ()) in
-      let _ = MatchingEngine.execute_regular_order me dir order ticker in 
-      let json_string = MatchingEngine.orderbooks_to_json_string me in
+      let _ = MatchingEngine.execute_regular_order new_me dir order ticker in 
+      let json_string = MatchingEngine.orderbooks_to_json_string new_me in
       let json_me = Yojson.Basic.from_string json_string in
       Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "engine.json") 
         json_me;
-      let am = MatchingEngine.get_account_manager me in
-      let json_string = AccountManager.to_json_string am in
+      let updated_am = MatchingEngine.get_account_manager new_me in
+      let json_string = AccountManager.to_json_string updated_am in
       let json_am = Yojson.Basic.from_string json_string in
       Yojson.Basic.to_file (dirname ^ Filename.dir_sep ^ "accounts.json") 
         json_am;
