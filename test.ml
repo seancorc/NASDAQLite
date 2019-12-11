@@ -18,7 +18,7 @@
     maximal code coverage, we know that the core calculations of our stock 
     exchange are carried out correctly.
 
-    The four modules being manually tested are dao.ml, helpers.ml, 
+    The four modules being manually tested are dao.ml, replHelpers.ml, 
     exchangeServer.ml, and main.ml. We are testing these manually because they 
     make up the user-interface and server section of our system, or the “front 
     end”. These can be tested more easily through manual testing. 

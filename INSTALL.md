@@ -30,21 +30,21 @@ your new Terminal window to both compile and launch the executable:
 Make start will compile the main.ml into main.byte and run it, opening up
 the text based user interface.
 
-If you are getting odd errors, Note: Make server attempts to create a directory 
+(** If you are getting odd errors, Note: Make server attempts to create a directory 
 named ‘data’ with files to store and get data, so make sure you don’t have a 
-malformatted ‘data’ directory in the NASDAQLite directory.
+malformatted ‘data’ directory in the NASDAQLite directory. **)
 
 Using the text based user interface:
 
-Enter "login" or "signup" in order to register and use an account.
+Enter "signup" in order to register and use an account.
 
-Once signed in, you can place an order by typing the prompted format: 
+Once signed up, you can place an order by typing the prompted format: 
 ordertype, ticker, order size, price (price is not needed for market orders)
 
 Note: Initially, the available tickers/assets for orders are: AAPL, MSFT, AMZN, 
 ROKU, GOOG
 
-Ex.  
+Ex orders:  
 
 Buy,AAPL,100,10.0  
 
@@ -64,12 +64,12 @@ Note: a market order with no opposing orders (buying at market with no sell
 orders in the market) will not fill.
 
 
-You can also create a new asset with by typing 'create' and then being prompted
+You can also create a new asset by typing 'create' and then being prompted
 to input the name of the asset you'd like to create. Note: assets are 
 automatically turned to be all uppercase once created.
 
 
 When finished on the current account, you can either logout by typing 'logout' 
-or save and quit by typing 'quit'. Note: all information from the current 
-session will be saved for later use.
+or quit by typing 'quit'. Note: all information from the current 
+session will be saved in the 'data' directory for later use.
 
