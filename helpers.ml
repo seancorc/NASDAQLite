@@ -14,12 +14,13 @@ type action = Login | Signup | Delete
     user's input. *)
 let rec start_loop () = 
   print_endline ("Type 'login' to login, 'signup' to signup, or 'delete' to \
-                  delete an account");
-  match String.trim(read_line ()) with
+                  delete an account (type 'quit' to exit)");
+  match String.lowercase_ascii (String.trim(read_line ())) with
   | "login" -> Login
   | "signup" -> Signup
   | "delete" -> Delete
-  | _ -> print_endline "I couldn't understand that command, please try again."; 
+  | "quit" -> Stdlib.exit 0;
+  | _ -> print_endline "\n**I couldn't understand that command, please try again.**"; 
     start_loop ()
 
 (** [startup_action] prints the welcome message and prompts [start_loop]. *)
@@ -52,13 +53,13 @@ let login (s : state) : state =
     {username=Some username}
   with 
   | Invalid_password ->
-    print_endline "Incorrect password";
+    print_endline "\n**Incorrect password**";
     s
   | (Invalid_username a) -> 
     print_endline a;
     s
   | _ -> 
-    print_endline "There was a server error, please try again.";
+    print_endline "\n**There was a server error, please try again.**";
     s
 
 (** [register s] prompts the user to register a newaccount with a new username
@@ -74,13 +75,13 @@ let register (s : state) : state =
     new_s  
   with 
   | Invalid_password ->
-    print_endline "Incorrect password";
+    print_endline "\n**Incorrect password**";
     s
   | (Invalid_username a) -> 
     print_endline a;
     s
   | _ -> 
-    print_endline "There was a server error, please try again.";
+    print_endline "\n**There was a server error, please try again.**";
     s
 
 (** [delete s] prompts the user to delete an account with a username
@@ -92,17 +93,17 @@ let delete (s : state) : state =
   let password = (read_line ()) in 
   try 
     let _ = Dao.delete_user username password in
-    print_endline "Account deleted";
+    print_endline "\n**Account deleted**";
     s
   with 
   | Invalid_password ->
-    print_endline "Incorrect password";
+    print_endline "\n**Incorrect password**";
     s
   | (Invalid_username a) -> 
     print_endline a;
     s
   | _ -> 
-    print_endline "There was a server error, please try again.";
+    print_endline "\n**There was a server error, please try again.**";
     s
 
 (** [restart s] prompts the user to register a newaccount with a new username
@@ -117,10 +118,10 @@ let parse_order (usr: string) (lst: string list) : (string * submitted_order) op
   try
     begin
       let ticker, submitted_order = match lst with 
-        | ["Buy"; ticker; amount; price] -> ticker, (Buy, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
-        | ["Sell"; ticker; amount; price] -> ticker, (Sell, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
-        | ["Buy Market"; ticker; amount] -> ticker, (Buy, (usr, (int_of_string amount), max_float, (Unix.time ())))
-        | ["Sell Market"; ticker; amount] -> ticker, (Sell, (usr, (int_of_string amount), min_float, (Unix.time ())))
+        | ["buy"; ticker; amount; price] -> ticker, (Buy, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
+        | ["sell"; ticker; amount; price] -> ticker, (Sell, (usr, (int_of_string amount), (float_of_string price), (Unix.time ())))
+        | ["buy market"; ticker; amount] -> ticker, (Buy, (usr, (int_of_string amount), max_float, (Unix.time ())))
+        | ["sell market"; ticker; amount] -> ticker, (Sell, (usr, (int_of_string amount), min_float, (Unix.time ())))
         | _ -> raise Not_found in 
       Some ((ticker, submitted_order))
     end
@@ -140,9 +141,11 @@ let prompt_user_input username =
       (ticker,amount) :: acc) [] json_positions  in
   let balances = ("USD", (int_of_float usd_balance)) :: positions in 
   let _ = print_balances balances in 
-  print_endline "To log out of this account, type 'logout' and to exit type 'quit'";
-  print_endline "To place an order input: order type (Buy, Sell, Buy Market, Sell Market), ticker, order size, price (only for Buy or Sell)";
-  read_line ()
+  print_endline "To log out of this account, type 'logout' and to create\
+                 an asset, type 'create' (to exit type 'quit')";
+  print_endline "To place an order input: order type (Buy, Sell, Buy Market,\
+                 Sell Market), ticker, order size, price (only for Buy or Sell)";
+  String.lowercase_ascii (read_line ())
 
 let string_of_dir = function
   | Buy -> "buy"
@@ -154,6 +157,16 @@ let read_input s username input =
     {username = None}
   | "quit" ->
     Stdlib.exit 0;
+  | "create" ->
+    print_string "Ticker: ";
+    let ticker = String.uppercase_ascii (String.trim(read_line ())) in 
+    begin try 
+        Dao.create_asset ticker;
+        s
+      with _ -> 
+        print_endline "\n**There was a server error, please try again.**";
+        s
+    end
   | a -> 
     begin 
       (* Buy/Sell ticker amount price *)
@@ -161,15 +174,17 @@ let read_input s username input =
       let lst' = List.map (String.trim) lst in
       let parsed_order = parse_order username lst' in 
       match parsed_order with 
-      | None -> print_endline "Invalid order"; s
+      | None -> print_endline "\n**Invalid order**"; s
       | Some (ticker, (dir, (username, amount, price, time))) ->
         begin
           try 
-            Dao.execute_order username (string_of_dir dir) ticker 
+            Dao.execute_order username (string_of_dir dir) 
+              (String.uppercase_ascii ticker)
               (string_of_int amount) (string_of_float price);
+            print_endline "\n**Order placed**";
             s
           with e -> 
-            print_endline "There was a server error, please try again.";
+            print_endline "\n**There was a server error, please try again.**";
             s
         end
     end

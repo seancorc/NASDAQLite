@@ -14,6 +14,8 @@ module type MatchingEngine = sig
   val load_from_json : Yojson.Basic.t -> t  
   val get_account_manager : t -> AccountManager.AccountManager.t
   val set_account_manager : t -> AccountManager.AccountManager.t -> t
+  val delete_user : t -> string -> string -> unit
+  val add_asset : t -> string -> unit
 end
 
 (** [MatchingEngine] is the implementation of the MatchingEngine signature *)

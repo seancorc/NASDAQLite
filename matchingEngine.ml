@@ -15,6 +15,8 @@ module type MatchingEngine = sig
   val load_from_json : Yojson.Basic.t -> t
   val get_account_manager : t -> AccountManager.t
   val set_account_manager : t -> AccountManager.t -> t
+  val delete_user : t -> string -> string -> unit
+  val add_asset : t -> string -> unit
 end
 
 exception UnboundTicker
@@ -57,6 +59,9 @@ module MatchingEngine : MatchingEngine = struct
       orderbooks = obs;
       account_manager = am;
     }
+
+  let add_asset me ticker =
+    D.add me.orderbooks ticker OrderBook.empty 
 
   let get_account_manager (me: t) = me.account_manager
 
@@ -117,6 +122,7 @@ module MatchingEngine : MatchingEngine = struct
     | [] -> ()
     | h :: t -> 
       let ticker = h |> to_assoc |> List.assoc "ticker" |> to_string in
+      let _ = if member me ticker = false then add_asset me ticker else () in
       let buys = h |> to_assoc |> List.assoc "buys" |> to_list in
       populate_orders_for_direction me buys ticker Buy;
       let sells = h |> to_assoc |> List.assoc "sells" |> to_list in
@@ -195,4 +201,11 @@ module MatchingEngine : MatchingEngine = struct
       | Sell -> (addr, amount, min_float, Unix.time ())in 
     let _ = execute_regular_order me direction order ticker in 
     ()
+
+  let delete_user me username pass =
+    AccountManager.delete_user me.account_manager username pass;
+    D.filter_map_inplace (fun k v ->
+        Some (OrderBook.delete_user v username)
+      ) me.orderbooks;
+
 end

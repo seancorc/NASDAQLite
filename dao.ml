@@ -12,6 +12,7 @@ module type Dao = sig
   val login_user : string -> string -> unit
   val delete_user : string -> string -> unit
   val execute_order : string -> string -> string -> string -> string -> unit
+  val create_asset : string -> unit
 end
 
 exception Server_Error
@@ -98,7 +99,21 @@ module Dao : Dao = struct
     let json = Lwt_main.run body in
     match json |> to_assoc |> List.assoc "success" |> to_bool with
     | true -> ()
-    | _ -> raise Server_Error    
+    | _ -> raise Server_Error 
+
+  let create_asset ticker = 
+    let json_string = "{\"ticker\": \"" ^ ticker  ^ "\" }" in
+    let post_body = Cohttp_lwt.Body.of_string json_string in
+    let body =
+      Client.post ~body:post_body 
+        (Uri.of_string "http://localhost:8000/engine/asset/") >>= fun (resp, body) ->
+      body |> Cohttp_lwt.Body.to_string >|= fun body ->
+      Yojson.Basic.from_string body 
+    in         
+    let json = Lwt_main.run body in
+    match json |> to_assoc |> List.assoc "success" |> to_bool with
+    | true -> ()
+    | _ -> raise Server_Error 
 
   let delete_user username pass = 
     let json_string = "{\n\"username\":\"" ^ username ^ "\",\n 
